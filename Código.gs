@@ -358,17 +358,6 @@ function actualizarEstatusLocal(data) {
   }
 }
 
-function logWebhook(data) {
-  try {
-    const ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
-    const sheet = ss.getSheetByName('Logs_Webhook');
-    sheet.appendRow([Utilities.getUuid(), new Date(), JSON.stringify(data), 'OK']);
-  } catch (e) {}
-}
-
-function actualizarEstatusLocal(data) {
-  // Lógica para actualizar las hojas locales basada en lo que envíe AppSheet
-}
 
 function generarCredencialPDF(idEmpresa) {
   // Simulación de generación de PDF
