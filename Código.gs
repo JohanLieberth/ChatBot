@@ -9,8 +9,11 @@ const CONFIG = {
   APPSHEET_APP_ID: '', // SE DEBE COMPLETAR AL DESPLEGAR
   APPSHEET_ACCESS_KEY: '', // SE DEBE COMPLETAR AL DESPLEGAR
 
-  // Google Maps (opcional, puede usar OSM gratuito)
+  // Google Maps (opcional)
   MAPS_API_KEY: '', // SE DEBE COMPLETAR AL DESPLEGAR
+
+  // Stadia Maps (Alternativa Leaflet)
+  STADIA_MAPS_API_KEY: '', // SE DEBE COMPLETAR AL DESPLEGAR
 
   // Email
   EMAIL_INSTITUTO: 'mujeres.seguras@merida.gob.mx',

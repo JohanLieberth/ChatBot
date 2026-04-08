@@ -26,7 +26,8 @@ Crea un nuevo Spreadsheet de Google y renombra las hojas exactamente como se ind
    - `ServiceWorker.html`
 4. En `Código.gs`, actualiza el objeto `CONFIG`:
    - `SHEET_ID`: El ID de tu Spreadsheet.
-   - `MAPS_API_KEY`: Tu API Key de Google Maps (debes habilitar Maps JavaScript API y Geocoding API en Google Cloud Console).
+   - `MAPS_API_KEY`: Tu API Key de Google Maps.
+   - `STADIA_MAPS_API_KEY`: Tu API Key de Stadia Maps (Alternativa si no usas Google Maps).
    - `APPSHEET_APP_ID` y `APPSHEET_ACCESS_KEY`: Si ya tienes la app de AppSheet configurada.
 5. En `JavaScript.html` (al final), reemplaza `YOUR_API_KEY` por tu API Key de Maps.
 

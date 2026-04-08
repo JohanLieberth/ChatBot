@@ -3,7 +3,8 @@
      * GLOBAL STATE
      */
     const CONFIG_FRONT = {
-        APPSHEET_APP_ID: 'YOUR_APP_ID'
+        APPSHEET_APP_ID: 'YOUR_APP_ID',
+        STADIA_API_KEY: '' // Se puede pasar desde Código.gs si se desea
     };
 
     let currentStep = 1;
@@ -232,15 +233,34 @@
     }
 
     /**
-     * MAPS INTEGRATION (Using Google Maps API if available, else Leaflet/OSM logic)
+     * MAPS INTEGRATION (Google Maps o Stadia Maps via Leaflet)
      */
     function initMap() {
-        if (!map && window.google) {
+        if (map) return;
+
+        const center = [20.967370, -89.623740];
+
+        if (window.google && !CONFIG_FRONT.STADIA_API_KEY) {
+            // Google Maps
             map = new google.maps.Map(document.getElementById('map'), {
-                center: { lat: 20.967370, lng: -89.623740 },
+                center: { lat: center[0], lng: center[1] },
                 zoom: 12,
                 styles: mapStyles
             });
+            updateMarkers();
+        } else if (window.L) {
+            // Leaflet with Stadia Maps
+            map = L.map('map').setView(center, 12);
+
+            const apiKey = CONFIG_FRONT.STADIA_API_KEY;
+            const tileUrl = apiKey
+                ? `https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=${apiKey}`
+                : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+            L.tileLayer(tileUrl, {
+                attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
             updateMarkers();
         }
     }
@@ -249,34 +269,26 @@
         if (!map) return;
 
         // Clear old markers
-        markers.forEach(m => m.setMap(null));
-        markers = [];
-
-        formData.sucursales.forEach(branch => {
-            const marker = new google.maps.Marker({
-                position: { lat: branch.lat, lng: branch.lng },
-                map: map,
-                title: branch.nombre,
-                icon: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
+        if (window.google && map instanceof google.maps.Map) {
+            markers.forEach(m => m.setMap(null));
+            markers = [];
+            formData.sucursales.forEach(branch => {
+                const marker = new google.maps.Marker({
+                    position: { lat: branch.lat, lng: branch.lng },
+                    map: map,
+                    icon: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
+                });
+                markers.push(marker);
             });
-
-            const infoWindow = new google.maps.InfoWindow({
-                content: `
-                    <div class="p-3">
-                        <h5 class="font-bold text-ms-purple mb-1">${branch.nombre}</h5>
-                        <p class="text-xs text-gray-600 mb-2">${branch.direccion}</p>
-                        <div class="text-[10px] uppercase font-bold text-gray-400">Responsable</div>
-                        <div class="text-xs font-medium text-gray-800">${branch.responsable}</div>
-                    </div>
-                `
+        } else if (window.L) {
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+            formData.sucursales.forEach(branch => {
+                const marker = L.marker([branch.lat, branch.lng]).addTo(map)
+                    .bindPopup(`<b>${branch.nombre}</b><br>${branch.direccion}`);
+                markers.push(marker);
             });
-
-            marker.addListener('click', () => {
-                infoWindow.open(map, marker);
-            });
-
-            markers.push(marker);
-        });
+        }
     }
 
     function geocodeBranch(index) {
@@ -309,21 +321,37 @@
         document.getElementById('map-modal').classList.add('flex');
 
         const branch = formData.sucursales[index];
-        const pos = { lat: branch.lat, lng: branch.lng };
+        const posArr = [branch.lat, branch.lng];
+        const posObj = { lat: branch.lat, lng: branch.lng };
 
-        if (!modalMap && window.google) {
-            modalMap = new google.maps.Map(document.getElementById('modal-map'), {
-                center: pos,
-                zoom: 15
-            });
-            modalMarker = new google.maps.Marker({
-                position: pos,
-                map: modalMap,
-                draggable: true
-            });
-        } else if (modalMap) {
-            modalMap.setCenter(pos);
-            modalMarker.setPosition(pos);
+        if (!modalMap) {
+            if (window.google && !CONFIG_FRONT.STADIA_API_KEY) {
+                modalMap = new google.maps.Map(document.getElementById('modal-map'), {
+                    center: posObj,
+                    zoom: 15
+                });
+                modalMarker = new google.maps.Marker({
+                    position: posObj,
+                    map: modalMap,
+                    draggable: true
+                });
+            } else if (window.L) {
+                modalMap = L.map('modal-map').setView(posArr, 15);
+                const apiKey = CONFIG_FRONT.STADIA_API_KEY;
+                const tileUrl = apiKey
+                    ? `https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=${apiKey}`
+                    : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+                L.tileLayer(tileUrl).addTo(modalMap);
+                modalMarker = L.marker(posArr, {draggable: true}).addTo(modalMap);
+            }
+        } else {
+            if (window.google && modalMap instanceof google.maps.Map) {
+                modalMap.setCenter(posObj);
+                modalMarker.setPosition(posObj);
+            } else if (window.L) {
+                modalMap.setView(posArr, 15);
+                modalMarker.setLatLng(posArr);
+            }
         }
     }
 
@@ -333,9 +361,18 @@
     }
 
     function confirmMapLocation() {
-        const pos = modalMarker.getPosition();
-        formData.sucursales[activeBranchIndex].lat = pos.lat();
-        formData.sucursales[activeBranchIndex].lng = pos.lng();
+        let lat, lng;
+        if (window.google && modalMarker.getPosition) {
+            const pos = modalMarker.getPosition();
+            lat = pos.lat();
+            lng = pos.lng();
+        } else if (modalMarker.getLatLng) {
+            const pos = modalMarker.getLatLng();
+            lat = pos.lat;
+            lng = pos.lng;
+        }
+        formData.sucursales[activeBranchIndex].lat = lat;
+        formData.sucursales[activeBranchIndex].lng = lng;
         renderBranches();
         closeMapModal();
     }
