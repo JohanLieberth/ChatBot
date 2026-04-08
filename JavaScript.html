@@ -1,0 +1,553 @@
+<script>
+    /**
+     * GLOBAL STATE
+     */
+    const CONFIG_FRONT = {
+        APPSHEET_APP_ID: 'YOUR_APP_ID',
+        STADIA_API_KEY: '' // Se puede pasar desde Código.gs si se desea
+    };
+
+    let currentStep = 1;
+    let registeredEmpresaId = null;
+    let formData = {
+        fiscales: {
+            rfc: '',
+            representante: '',
+            telefono: '',
+            email: ''
+        },
+        sucursales: []
+    };
+
+    let map = null;
+    let markers = [];
+    let activeBranchIndex = null;
+    let mapsLoaded = false;
+
+    /**
+     * INITIALIZATION
+     */
+    document.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const empresaId = urlParams.get('empresaId');
+
+        if (empresaId) {
+            registeredEmpresaId = empresaId;
+            showStep(4);
+            loadTrackingData(empresaId);
+        } else {
+            loadDraft();
+            renderBranches();
+        }
+        setupValidation();
+        initAutoSave();
+    });
+
+    /**
+     * STEP NAVIGATION
+     */
+    function nextStep(step) {
+        if (step === 2 && !validateFiscalData()) return;
+        if (step === 3 && !validateBranches()) return;
+
+        showStep(step);
+    }
+
+    function prevStep(step) {
+        showStep(step);
+    }
+
+    function showStep(step) {
+        // Update UI
+        document.getElementById(`section-${currentStep}`).classList.add('hidden');
+        document.getElementById(`section-${step}`).classList.remove('hidden');
+
+        // Progress Bar
+        const percent = step * 25;
+        document.getElementById('progress-bar').style.width = `${percent}%`;
+        document.getElementById('step-percent').innerText = `${percent}%`;
+
+        const labels = {
+            1: 'Paso 1: Datos Fiscales',
+            2: 'Paso 2: Sucursales',
+            3: 'Paso 3: Vista de Mapa',
+            4: 'Paso 4: Seguimiento'
+        };
+        document.getElementById('step-label').innerText = labels[step];
+
+        currentStep = step;
+
+        if (step === 3) {
+            initMap();
+        }
+    }
+
+    /**
+     * VALIDATION
+     */
+    function setupValidation() {
+        const rfcInput = document.getElementById('rfc');
+        rfcInput.addEventListener('input', (e) => {
+            const val = e.target.value.toUpperCase();
+            e.target.value = val;
+
+            google.script.run.withSuccessHandler((isValid) => {
+                const group = rfcInput.closest('.form-group');
+                const status = group.querySelector('.validation-status');
+                if (isValid) {
+                    group.classList.add('valid');
+                    group.classList.remove('invalid');
+                    status.innerHTML = '<i class="fas fa-check-circle text-green-500"></i>';
+                } else {
+                    group.classList.add('invalid');
+                    group.classList.remove('valid');
+                    status.innerHTML = '<i class="fas fa-exclamation-circle text-red-500"></i>';
+                }
+            }).validarRFC(val);
+        });
+
+        // Phone mask
+        const phoneInput = document.getElementById('telefono');
+        phoneInput.addEventListener('input', (e) => {
+            let x = e.target.value.replace(/\D/g, '').match(/(\d{0,3})(\d{0,3})(\d{0,4})/);
+            e.target.value = !x[2] ? x[1] : '(' + x[1] + ') ' + x[2] + (x[3] ? '-' + x[3] : '');
+        });
+    }
+
+    function validateFiscalData() {
+        formData.fiscales.rfc = document.getElementById('rfc').value;
+        formData.fiscales.representante = document.getElementById('representante').value;
+        formData.fiscales.telefono = document.getElementById('telefono').value;
+        formData.fiscales.email = document.getElementById('email').value;
+
+        if (!formData.fiscales.rfc || !formData.fiscales.representante || !formData.fiscales.telefono || !formData.fiscales.email) {
+            showToast('Por favor completa todos los campos obligatorios', 'error');
+            return false;
+        }
+        return true;
+    }
+
+    function validateBranches() {
+        if (formData.sucursales.length === 0) {
+            showToast('Debe registrar al menos una sucursal', 'warning');
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * BRANCH MANAGEMENT
+     */
+    function addBranch() {
+        if (formData.sucursales.length >= 10) {
+            showToast('Máximo 10 sucursales permitidas', 'warning');
+            return;
+        }
+
+        const newBranch = {
+            id: Date.now(),
+            nombre: '',
+            direccion: '',
+            lat: 20.967370,
+            lng: -89.623740,
+            horario: 'Lun-Vie 9:00-18:00',
+            telefono: '',
+            responsable: '',
+            cargo: ''
+        };
+
+        formData.sucursales.push(newBranch);
+        renderBranches();
+    }
+
+    function removeBranch(index) {
+        formData.sucursales.splice(index, 1);
+        renderBranches();
+    }
+
+    function updateBranchField(index, field, value) {
+        formData.sucursales[index][field] = value;
+        saveDraft();
+    }
+
+    function renderBranches() {
+        const container = document.getElementById('sucursales-container');
+        container.innerHTML = '';
+
+        formData.sucursales.forEach((branch, index) => {
+            const div = document.createElement('div');
+            div.className = 'branch-card bg-gray-50 rounded-xl p-6 border border-gray-100 mb-4 transition-all';
+            div.innerHTML = `
+                <div class="flex justify-between items-center mb-4">
+                    <h4 class="font-bold text-gray-700">Sucursal #${index + 1}</h4>
+                    <button onclick="removeBranch(${index})" class="text-red-400 hover:text-red-600 transition-colors">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="col-span-2">
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Nombre Comercial</label>
+                        <input type="text" value="${branch.nombre}" onchange="updateBranchField(${index}, 'nombre', this.value)"
+                            class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-ms-purple outline-none">
+                    </div>
+                    <div class="col-span-2 relative">
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Dirección Completa</label>
+                        <div class="flex space-x-2">
+                            <input type="text" value="${branch.direccion}" onchange="updateBranchField(${index}, 'direccion', this.value)"
+                                placeholder="Calle, Número, Colonia, CP"
+                                class="flex-grow px-3 py-2 rounded-lg border border-gray-200 focus:border-ms-purple outline-none">
+                            <button onclick="geocodeBranch(${index})" class="px-3 bg-purple-50 text-ms-purple rounded-lg hover:bg-purple-100 transition-colors">
+                                <i class="fas fa-search-location"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Coordenadas</label>
+                        <button onclick="openMapModal(${index})" class="w-full flex items-center justify-between px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-600">
+                            <span>${branch.lat.toFixed(4)}, ${branch.lng.toFixed(4)}</span>
+                            <i class="fas fa-map-marker-alt text-ms-pink"></i>
+                        </button>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Horario de Operación</label>
+                        <select onchange="updateBranchField(${index}, 'horario', this.value)" class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg outline-none text-sm">
+                            <option value="Lun-Vie 9:00-18:00" ${branch.horario === 'Lun-Vie 9:00-18:00' ? 'selected' : ''}>Lun-Vie 9:00-18:00</option>
+                            <option value="Lun-Sab 8:00-20:00" ${branch.horario === 'Lun-Sab 8:00-20:00' ? 'selected' : ''}>Lun-Sab 8:00-20:00</option>
+                            <option value="24 Horas" ${branch.horario === '24 Horas' ? 'selected' : ''}>24 Horas</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Responsable</label>
+                        <input type="text" value="${branch.responsable}" onchange="updateBranchField(${index}, 'responsable', this.value)"
+                            class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-ms-purple outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Cargo</label>
+                        <input type="text" value="${branch.cargo}" onchange="updateBranchField(${index}, 'cargo', this.value)"
+                            class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-ms-purple outline-none">
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    /**
+     * MAPS INTEGRATION (Google Maps o Stadia Maps via Leaflet)
+     */
+    function initMap() {
+        if (map) return;
+
+        const center = [20.967370, -89.623740];
+
+        if (window.google && !CONFIG_FRONT.STADIA_API_KEY) {
+            // Google Maps
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: center[0], lng: center[1] },
+                zoom: 12,
+                styles: mapStyles
+            });
+            updateMarkers();
+        } else if (window.L) {
+            // Leaflet with Stadia Maps
+            map = L.map('map').setView(center, 12);
+
+            const apiKey = CONFIG_FRONT.STADIA_API_KEY;
+            const tileUrl = apiKey
+                ? `https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=${apiKey}`
+                : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+            L.tileLayer(tileUrl, {
+                attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            updateMarkers();
+        }
+    }
+
+    function updateMarkers() {
+        if (!map) return;
+
+        // Clear old markers
+        if (window.google && map instanceof google.maps.Map) {
+            markers.forEach(m => m.setMap(null));
+            markers = [];
+            formData.sucursales.forEach(branch => {
+                const marker = new google.maps.Marker({
+                    position: { lat: branch.lat, lng: branch.lng },
+                    map: map,
+                    icon: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
+                });
+                markers.push(marker);
+            });
+        } else if (window.L) {
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+            formData.sucursales.forEach(branch => {
+                const marker = L.marker([branch.lat, branch.lng]).addTo(map)
+                    .bindPopup(`<b>${branch.nombre}</b><br>${branch.direccion}`);
+                markers.push(marker);
+            });
+        }
+    }
+
+    function geocodeBranch(index) {
+        const branch = formData.sucursales[index];
+        if (!branch.direccion) return;
+
+        showToast('Buscando ubicación...', 'info');
+        google.script.run.withSuccessHandler((result) => {
+            if (result) {
+                formData.sucursales[index].lat = result.lat;
+                formData.sucursales[index].lng = result.lng;
+                formData.sucursales[index].direccion = result.formatted_address;
+                renderBranches();
+                showToast('Dirección geocodificada', 'success');
+            } else {
+                showToast('No se encontró la dirección', 'error');
+            }
+        }).geocodificarDireccion(branch.direccion);
+    }
+
+    /**
+     * MAP MODAL
+     */
+    let modalMap = null;
+    let modalMarker = null;
+
+    function openMapModal(index) {
+        activeBranchIndex = index;
+        document.getElementById('map-modal').classList.remove('hidden');
+        document.getElementById('map-modal').classList.add('flex');
+
+        const branch = formData.sucursales[index];
+        const posArr = [branch.lat, branch.lng];
+        const posObj = { lat: branch.lat, lng: branch.lng };
+
+        if (!modalMap) {
+            if (window.google && !CONFIG_FRONT.STADIA_API_KEY) {
+                modalMap = new google.maps.Map(document.getElementById('modal-map'), {
+                    center: posObj,
+                    zoom: 15
+                });
+                modalMarker = new google.maps.Marker({
+                    position: posObj,
+                    map: modalMap,
+                    draggable: true
+                });
+            } else if (window.L) {
+                modalMap = L.map('modal-map').setView(posArr, 15);
+                const apiKey = CONFIG_FRONT.STADIA_API_KEY;
+                const tileUrl = apiKey
+                    ? `https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=${apiKey}`
+                    : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+                L.tileLayer(tileUrl).addTo(modalMap);
+                modalMarker = L.marker(posArr, {draggable: true}).addTo(modalMap);
+            }
+        } else {
+            if (window.google && modalMap instanceof google.maps.Map) {
+                modalMap.setCenter(posObj);
+                modalMarker.setPosition(posObj);
+            } else if (window.L) {
+                modalMap.setView(posArr, 15);
+                modalMarker.setLatLng(posArr);
+            }
+        }
+    }
+
+    function closeMapModal() {
+        document.getElementById('map-modal').classList.add('hidden');
+        document.getElementById('map-modal').classList.remove('flex');
+    }
+
+    function confirmMapLocation() {
+        let lat, lng;
+        if (window.google && modalMarker.getPosition) {
+            const pos = modalMarker.getPosition();
+            lat = pos.lat();
+            lng = pos.lng();
+        } else if (modalMarker.getLatLng) {
+            const pos = modalMarker.getLatLng();
+            lat = pos.lat;
+            lng = pos.lng;
+        }
+        formData.sucursales[activeBranchIndex].lat = lat;
+        formData.sucursales[activeBranchIndex].lng = lng;
+        renderBranches();
+        closeMapModal();
+    }
+
+    /**
+     * SUBMISSION
+     */
+    function submitRegistration() {
+        const btn = document.getElementById('submit-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Procesando...';
+
+        google.script.run.withSuccessHandler((response) => {
+            if (response.success) {
+                registeredEmpresaId = response.empresaId;
+                showStep(4);
+                loadTrackingData(response.empresaId);
+                localStorage.removeItem('ms_draft');
+                showToast('¡Registro completado!', 'success');
+            } else {
+                showToast('Error: ' + response.error, 'error');
+                btn.disabled = false;
+                btn.innerHTML = 'Completar Registro <i class="fas fa-check-circle ml-2"></i>';
+            }
+        }).procesarRegistroCompleto(formData);
+    }
+
+    /**
+     * TRACKING PANEL LOGIC
+     */
+    function loadTrackingData(id) {
+        document.getElementById('tracking-company-id').innerText = id;
+        // Generar QR dinámico (usando API de Google Charts para rapidez)
+        const qrUrl = `https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl=${encodeURIComponent(id)}&choe=UTF-8`;
+        document.getElementById('qr-image').src = qrUrl;
+
+        google.script.run.withSuccessHandler((data) => {
+            if (data.error) {
+                showToast('No se pudo cargar la información de seguimiento', 'error');
+                return;
+            }
+
+            // Actualizar UI de Estatus
+            const statusLabel = document.getElementById('badge-status-label');
+            statusLabel.innerText = data.estatus;
+
+            const progressInner = document.getElementById('progress-inner');
+            const progressText = document.getElementById('progress-text');
+            progressInner.style.width = data.progreso + '%';
+            progressText.innerText = data.progreso + '%';
+
+            // Renderizar Capacitaciones
+            const trainingList = document.getElementById('training-list');
+            if (data.capacitaciones && data.capacitaciones.length > 0) {
+                trainingList.innerHTML = data.capacitaciones.map(t => `
+                    <div class="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg border-l-4 border-ms-pink">
+                        <div class="flex-grow">
+                            <p class="text-sm font-bold text-gray-700">${t.tipo}</p>
+                            <p class="text-xs text-gray-400">${t.fecha} • ${t.asistentes} asistentes</p>
+                        </div>
+                        ${t.evidencia ? `<a href="${t.evidencia}" target="_blank" class="text-ms-pink"><i class="fas fa-image"></i></a>` : ''}
+                    </div>
+                `).join('');
+            }
+
+            // Renderizar Plan de Trabajo
+            const workplanList = document.getElementById('workplan-list');
+            if (data.planTrabajo && data.planTrabajo.length > 0) {
+                workplanList.innerHTML = data.planTrabajo.map(p => `
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                            <p class="text-sm font-medium text-gray-700">${p.actividad}</p>
+                            <p class="text-[10px] text-gray-400 uppercase font-bold">${p.fecha}</p>
+                        </div>
+                        <span class="text-[10px] px-2 py-1 rounded-full ${p.estatus === 'Completado' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'} font-bold">
+                            ${p.estatus}
+                        </span>
+                    </div>
+                `).join('');
+            }
+
+            // Si hay sucursales, actualizarlas en el mapa si estamos en esa vista (o permitir regresar)
+            if (data.sucursales) {
+                formData.sucursales = data.sucursales;
+                // No llamamos a initMap aquí a menos que sea necesario
+            }
+        }).obtenerEstatusInsignia(id);
+    }
+
+    /**
+     * PERSISTENCE (LocalStorage)
+     */
+    function saveDraft() {
+        localStorage.setItem('ms_draft', JSON.stringify({
+            fiscales: formData.fiscales,
+            sucursales: formData.sucursales,
+            step: currentStep
+        }));
+        document.getElementById('status-badge').classList.remove('hidden');
+        setTimeout(() => document.getElementById('status-badge').classList.add('hidden'), 2000);
+    }
+
+    function loadDraft() {
+        const draft = localStorage.getItem('ms_draft');
+        if (draft) {
+            const data = JSON.parse(draft);
+            formData.fiscales = data.fiscales;
+            formData.sucursales = data.sucursales || [];
+
+            // Fill UI
+            document.getElementById('rfc').value = formData.fiscales.rfc || '';
+            document.getElementById('representante').value = formData.fiscales.representante || '';
+            document.getElementById('telefono').value = formData.fiscales.telefono || '';
+            document.getElementById('email').value = formData.fiscales.email || '';
+        } else {
+            // First run: add one branch
+            addBranch();
+        }
+    }
+
+    function initAutoSave() {
+        setInterval(() => {
+            if (currentStep < 4) saveDraft();
+        }, 30000);
+    }
+
+    /**
+     * UTILS
+     */
+    function showToast(message, type = 'info') {
+        const toast = document.getElementById('toast');
+        const icon = document.getElementById('toast-icon');
+        const text = document.getElementById('toast-message');
+
+        const colors = {
+            success: 'bg-green-500',
+            error: 'bg-red-500',
+            warning: 'bg-yellow-500',
+            info: 'bg-blue-500'
+        };
+
+        const icons = {
+            success: 'fa-check-circle',
+            error: 'fa-exclamation-triangle',
+            warning: 'fa-exclamation-circle',
+            info: 'fa-info-circle'
+        };
+
+        toast.className = `fixed bottom-8 right-8 px-6 py-3 rounded-xl shadow-2xl text-white font-semibold transition-all duration-300 z-[1000] flex items-center space-x-3 ${colors[type]}`;
+        icon.className = `fas ${icons[type]}`;
+        text.innerText = message;
+
+        toast.classList.remove('translate-y-24');
+        setTimeout(() => toast.classList.add('translate-y-24'), 4000);
+    }
+
+    const mapStyles = [
+        { "featureType": "administrative", "elementType": "labels.text.fill", "stylers": [{ "color": "#444444" }] },
+        { "featureType": "landscape", "elementType": "all", "stylers": [{ "color": "#f2f2f2" }] },
+        { "featureType": "poi", "elementType": "all", "stylers": [{ "visibility": "off" }] }
+    ];
+
+    function downloadPDF() {
+        showToast('Generando documento...', 'info');
+        google.script.run.withSuccessHandler((url) => {
+            window.open(url, '_blank');
+        }).generarCredencialPDF(formData.fiscales.rfc);
+    }
+</script>
+
+<!-- Carga asíncrona de Google Maps API (Solo si se proporciona KEY) -->
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=mapsInitCallback"></script>
+<script>
+    function mapsInitCallback() {
+        mapsLoaded = true;
+        if (currentStep === 3) initMap();
+    }
+</script>

@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insignia Mujeres Seguras</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'ms-pink': '#ec4899',
+                        'ms-purple': '#9333ea',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Leaflet (para Stadia Maps) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- PWA -->
+    <link rel="manifest" href='data:application/json,{
+  "name": "Insignia Mujeres Seguras",
+  "short_name": "MujeresSeguras",
+  "description": "Registro y Seguimiento del Programa Mujeres Seguras",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#9333ea",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3233/3233508.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
+'>
+    <meta name="theme-color" content="#9333ea">
+
+    <style>
+    :root {
+        --ms-pink: #ec4899;
+        --ms-purple: #9333ea;
+        --ms-pink-light: #fce7f3;
+        --ms-purple-light: #f3e8ff;
+    }
+
+    body {
+        font-family: 'Inter', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Page Transitions */
+    .page-transition {
+        animation: slideIn 0.5s ease-out forwards;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Form Validation Styles */
+    .form-group.invalid input {
+        border-color: #ef4444;
+        background-color: #fef2f2;
+    }
+
+    .form-group.valid input {
+        border-color: #10b981;
+        background-color: #f0fdf4;
+    }
+
+    .validation-status i {
+        font-size: 1.2rem;
+    }
+
+    .validation-status.valid i::before {
+        content: '\f058';
+        color: #10b981;
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+    }
+
+    .validation-status.invalid i::before {
+        content: '\f06a';
+        color: #ef4444;
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #d1d5db;
+        border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #9ca3af;
+    }
+
+    /* Branch Card Styles */
+    .branch-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border-left-width: 4px;
+        border-left-color: transparent;
+    }
+
+    .branch-card:hover {
+        border-left-color: var(--ms-pink);
+        transform: translateX(5px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    .branch-card.collapsed {
+        height: 60px;
+        overflow: hidden;
+    }
+
+    /* Map Tooltip Customization */
+    .gm-style-iw {
+        padding: 0 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .gm-style-iw-d {
+        overflow: hidden !important;
+    }
+
+    /* Floating Labels */
+    .floating-label-group {
+        position: relative;
+    }
+
+    /* Loading Spinner */
+    .loader {
+        border: 3px solid #f3f3f3;
+        border-radius: 50%;
+        border-top: 3px solid var(--ms-purple);
+        width: 24px;
+        height: 24px;
+        animation: spin 1s linear infinite;
+        display: inline-block;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 640px) {
+        .page-transition {
+            padding: 1.5rem;
+        }
+    }
+</style>
+
+
+    <script>
+    window.google = {
+        script: {
+            run: {
+                withSuccessHandler: function(handler) {
+                    return {
+                        validarRFC: function(rfc) {
+                            setTimeout(() => handler(true), 50);
+                        },
+                        geocodificarDireccion: function(dir) {
+                            setTimeout(() => handler({lat: 20.967, lng: -89.623, formatted_address: 'Mérida, Yuc.'}), 50);
+                        },
+                        procesarRegistroCompleto: function(data) {
+                            setTimeout(() => handler({success: true, empresaId: 'EMP-12345'}), 100);
+                        },
+                        obtenerEstatusInsignia: function(id) {
+                            setTimeout(() => handler({
+                                idEmpresa: id,
+                                estatus: 'Capacitación programada',
+                                progreso: 50,
+                                capacitaciones: [
+                                    {tipo: 'Sensibilización de Género', fecha: '12/10/2023', asistentes: 15, evidencia: '#'}
+                                ],
+                                planTrabajo: [
+                                    {actividad: 'Instalación de botones de pánico', fecha: '15/10/2023', responsable: 'Luis M.', estatus: 'Pendiente'}
+                                ],
+                                sucursales: []
+                            }), 100);
+                        },
+                        generarCredencialPDF: function(id) {
+                            setTimeout(() => handler('https://example.com/mock.pdf'), 50);
+                        }
+                    };
+                }
+            }
+        }
+    };
+    </script>
+    </head>
+<body class="bg-gray-50 text-gray-900 font-['Inter'] antialiased">
+
+    <!-- Navbar -->
+    <nav class="bg-gradient-to-r from-ms-pink to-ms-purple text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-shield-heart text-2xl"></i>
+                <span class="font-bold text-xl tracking-tight">Mujeres Seguras</span>
+            </div>
+            <div id="status-badge" class="hidden px-3 py-1 bg-white/20 rounded-full text-xs font-medium">
+                Sincronizado
+            </div>
+        </div>
+    </nav>
+
+    <!-- Progress Bar -->
+    <div class="max-w-4xl mx-auto px-4 mt-8">
+        <div class="relative pt-1">
+            <div class="flex mb-2 items-center justify-between">
+                <div id="step-label-container">
+                    <span id="step-label" class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-ms-purple bg-purple-100">
+                        Paso 1: Datos Fiscales
+                    </span>
+                </div>
+                <div class="text-right">
+                    <span id="step-percent" class="text-xs font-semibold inline-block text-ms-purple">25%</span>
+                </div>
+            </div>
+            <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-purple-100">
+                <div id="progress-bar" style="width:25%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-gradient-to-r from-ms-pink to-ms-purple transition-all duration-500"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto px-4 pb-20">
+
+        <!-- SECTION 1: DATOS FISCALES -->
+        <section id="section-1" class="page-transition bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                <i class="fas fa-file-invoice text-ms-pink mr-3"></i>Datos Fiscales
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="form-group relative">
+                    <label class="block text-sm font-semibold text-gray-600 mb-2">RFC de la Empresa *</label>
+                    <input type="text" id="rfc" placeholder="ABCD123456XYZ" maxlength="13"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-ms-purple focus:ring-2 focus:ring-purple-200 transition-all outline-none uppercase">
+                    <span class="validation-status absolute right-3 top-10"></span>
+                </div>
+                <div class="form-group">
+                    <label class="block text-sm font-semibold text-gray-600 mb-2">Representante Legal *</label>
+                    <input type="text" id="representante" placeholder="Ej. Lic. María García"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-ms-purple focus:ring-2 focus:ring-purple-200 transition-all outline-none">
+                </div>
+                <div class="form-group">
+                    <label class="block text-sm font-semibold text-gray-600 mb-2">Teléfono de Contacto *</label>
+                    <input type="tel" id="telefono" placeholder="(999) 999-9999"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-ms-purple focus:ring-2 focus:ring-purple-200 transition-all outline-none">
+                </div>
+                <div class="form-group">
+                    <label class="block text-sm font-semibold text-gray-600 mb-2">Correo Electrónico *</label>
+                    <input type="email" id="email" placeholder="ejemplo@empresa.com"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-ms-purple focus:ring-2 focus:ring-purple-200 transition-all outline-none">
+                </div>
+            </div>
+            <div class="mt-8 flex justify-end">
+                <button onclick="nextStep(2)" class="px-8 py-3 bg-gradient-to-r from-ms-pink to-ms-purple text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all transform hover:-translate-y-1">
+                    Guardar y continuar <i class="fas fa-arrow-right ml-2"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- SECTION 2: REGISTRO DE SUCURSALES -->
+        <section id="section-2" class="hidden page-transition bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                <i class="fas fa-store text-ms-pink mr-3"></i>Registro de Sucursales
+            </h2>
+
+            <div id="sucursales-container" class="space-y-4">
+                <!-- Template de sucursal -->
+            </div>
+
+            <div class="mt-6">
+                <button onclick="addBranch()" id="add-branch-btn" class="flex items-center space-x-2 text-ms-purple font-semibold hover:text-ms-pink transition-colors">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Agregar otra sucursal</span>
+                </button>
+            </div>
+
+            <div class="mt-10 flex justify-between">
+                <button onclick="prevStep(1)" class="px-6 py-3 border-2 border-gray-200 text-gray-500 font-bold rounded-xl hover:bg-gray-50 transition-all">
+                    Regresar
+                </button>
+                <button onclick="nextStep(3)" class="px-8 py-3 bg-gradient-to-r from-ms-pink to-ms-purple text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all transform hover:-translate-y-1">
+                    Continuar al mapa <i class="fas fa-arrow-right ml-2"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- SECTION 3: MAPA Y VISTA PREVIA -->
+        <section id="section-3" class="hidden page-transition bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                <i class="fas fa-map-marked-alt text-ms-pink mr-3"></i>Vista de Mapa
+            </h2>
+
+            <div id="map" class="w-full h-96 rounded-xl border border-gray-200 mb-6 z-0"></div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <div class="p-4 bg-green-50 border border-green-100 rounded-xl flex items-center">
+                    <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+                    <span class="text-xs font-medium text-green-800">Insignia Activa</span>
+                </div>
+                <div class="p-4 bg-yellow-50 border border-yellow-100 rounded-xl flex items-center">
+                    <div class="w-3 h-3 bg-yellow-500 rounded-full mr-3"></div>
+                    <span class="text-xs font-medium text-yellow-800">En Validación</span>
+                </div>
+                <div class="p-4 bg-red-50 border border-red-100 rounded-xl flex items-center">
+                    <div class="w-3 h-3 bg-red-500 rounded-full mr-3"></div>
+                    <span class="text-xs font-medium text-red-800">Pendiente</span>
+                </div>
+            </div>
+
+            <div class="mt-10 flex justify-between">
+                <button onclick="prevStep(2)" class="px-6 py-3 border-2 border-gray-200 text-gray-500 font-bold rounded-xl hover:bg-gray-50 transition-all">
+                    Regresar
+                </button>
+                <button onclick="submitRegistration()" id="submit-btn" class="px-10 py-4 bg-gradient-to-r from-ms-pink to-ms-purple text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
+                    Completar Registro <i class="fas fa-check-circle ml-2"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- SECTION 4: PANEL DE SEGUIMIENTO -->
+        <section id="section-4" class="hidden page-transition space-y-8">
+
+            <!-- Resumen de Estatus -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
+                <div id="status-icon-container" class="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl">
+                    <i class="fas fa-award"></i>
+                </div>
+                <h2 id="tracking-title" class="text-3xl font-bold text-gray-800 mb-2">Estatus de la Insignia</h2>
+                <p id="tracking-company-id" class="text-sm font-mono text-gray-400 mb-8"></p>
+
+                <div class="max-w-md mx-auto bg-gray-50 rounded-2xl p-6 border border-gray-100">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Estado Actual</span>
+                        <span id="badge-status-label" class="px-3 py-1 bg-purple-100 text-ms-purple rounded-full text-xs font-bold uppercase">Cargando...</span>
+                    </div>
+                    <div class="relative pt-1">
+                        <div class="flex mb-2 items-center justify-between">
+                            <div><span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-ms-purple bg-purple-100">Progreso</span></div>
+                            <div class="text-right"><span id="progress-text" class="text-xs font-semibold inline-block text-ms-purple">0%</span></div>
+                        </div>
+                        <div class="overflow-hidden h-3 mb-4 text-xs flex rounded bg-purple-100">
+                            <div id="progress-inner" style="width:0%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-gradient-to-r from-ms-pink to-ms-purple transition-all duration-1000"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grid de Detalles -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Historial de Capacitaciones -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <h3 class="font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-graduation-cap text-ms-pink mr-2"></i> Historial de Capacitaciones
+                    </h3>
+                    <div id="training-list" class="space-y-4">
+                        <p class="text-sm text-gray-500 italic">No hay capacitaciones registradas aún.</p>
+                    </div>
+                </div>
+
+                <!-- Plan de Trabajo -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <h3 class="font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-tasks text-ms-purple mr-2"></i> Plan de Trabajo
+                    </h3>
+                    <div id="workplan-list" class="space-y-4">
+                        <p class="text-sm text-gray-500 italic">No se ha asignado un plan de trabajo.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Acciones y QR -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 flex flex-col md:flex-row items-center justify-between gap-8">
+                <div class="flex space-x-4">
+                    <button onclick="window.open('https://www.appsheet.com/start/' + CONFIG_FRONT.APPSHEET_APP_ID, '_blank')" class="flex items-center px-6 py-3 bg-gray-800 text-white rounded-xl font-bold hover:bg-black transition-all">
+                        <i class="fas fa-external-link-alt mr-2"></i> AppSheet
+                    </button>
+                    <button onclick="downloadPDF()" class="flex items-center px-6 py-3 border-2 border-ms-pink text-ms-pink rounded-xl font-bold hover:bg-ms-pink hover:text-white transition-all">
+                        <i class="fas fa-download mr-2"></i> Descargar Acuse
+                    </button>
+                </div>
+                <div class="text-center">
+                    <div id="qr-container" class="p-2 bg-white border border-gray-100 rounded-lg shadow-sm">
+                        <!-- Imagen QR dinámica -->
+                        <img id="qr-image" src="" alt="QR" class="w-24 h-24">
+                    </div>
+                    <span class="text-[10px] font-bold text-gray-400 uppercase mt-2 block">Validación Oficial</span>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Map Selection Modal -->
+    <div id="map-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[100] px-4">
+        <div class="bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl">
+            <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="font-bold text-gray-700">Ubicar Sucursal en el Mapa</h3>
+                <button onclick="closeMapModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="modal-map" class="h-96 w-full"></div>
+            <div class="p-4 flex justify-end space-x-3 bg-gray-50">
+                <button onclick="closeMapModal()" class="px-4 py-2 text-sm font-semibold text-gray-500">Cancelar</button>
+                <button onclick="confirmMapLocation()" class="px-6 py-2 text-sm font-bold bg-ms-purple text-white rounded-lg">Confirmar Ubicación</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-8 right-8 px-6 py-3 rounded-xl shadow-2xl text-white font-semibold transform translate-y-24 transition-all duration-300 z-[1000] flex items-center space-x-3">
+        <i id="toast-icon" class="fas"></i>
+        <span id="toast-message"></span>
+    </div>
+
+    <script>
+    /**
+     * GLOBAL STATE
+     */
+    const CONFIG_FRONT = {
+        APPSHEET_APP_ID: 'YOUR_APP_ID',
+        STADIA_API_KEY: '' // Se puede pasar desde Código.gs si se desea
+    };
+
+    let currentStep = 1;
+    let registeredEmpresaId = null;
+    let formData = {
+        fiscales: {
+            rfc: '',
+            representante: '',
+            telefono: '',
+            email: ''
+        },
+        sucursales: []
+    };
+
+    let map = null;
+    let markers = [];
+    let activeBranchIndex = null;
+    let mapsLoaded = false;
+
+    /**
+     * INITIALIZATION
+     */
+    document.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const empresaId = urlParams.get('empresaId');
+
+        if (empresaId) {
+            registeredEmpresaId = empresaId;
+            showStep(4);
+            loadTrackingData(empresaId);
+        } else {
+            loadDraft();
+            renderBranches();
+        }
+        setupValidation();
+        initAutoSave();
+    });
+
+    /**
+     * STEP NAVIGATION
+     */
+    function nextStep(step) {
+        if (step === 2 && !validateFiscalData()) return;
+        if (step === 3 && !validateBranches()) return;
+
+        showStep(step);
+    }
+
+    function prevStep(step) {
+        showStep(step);
+    }
+
+    function showStep(step) {
+        // Update UI
+        document.getElementById(`section-${currentStep}`).classList.add('hidden');
+        document.getElementById(`section-${step}`).classList.remove('hidden');
+
+        // Progress Bar
+        const percent = step * 25;
+        document.getElementById('progress-bar').style.width = `${percent}%`;
+        document.getElementById('step-percent').innerText = `${percent}%`;
+
+        const labels = {
+            1: 'Paso 1: Datos Fiscales',
+            2: 'Paso 2: Sucursales',
+            3: 'Paso 3: Vista de Mapa',
+            4: 'Paso 4: Seguimiento'
+        };
+        document.getElementById('step-label').innerText = labels[step];
+
+        currentStep = step;
+
+        if (step === 3) {
+            initMap();
+        }
+    }
+
+    /**
+     * VALIDATION
+     */
+    function setupValidation() {
+        const rfcInput = document.getElementById('rfc');
+        rfcInput.addEventListener('input', (e) => {
+            const val = e.target.value.toUpperCase();
+            e.target.value = val;
+
+            google.script.run.withSuccessHandler((isValid) => {
+                const group = rfcInput.closest('.form-group');
+                const status = group.querySelector('.validation-status');
+                if (isValid) {
+                    group.classList.add('valid');
+                    group.classList.remove('invalid');
+                    status.innerHTML = '<i class="fas fa-check-circle text-green-500"></i>';
+                } else {
+                    group.classList.add('invalid');
+                    group.classList.remove('valid');
+                    status.innerHTML = '<i class="fas fa-exclamation-circle text-red-500"></i>';
+                }
+            }).validarRFC(val);
+        });
+
+        // Phone mask
+        const phoneInput = document.getElementById('telefono');
+        phoneInput.addEventListener('input', (e) => {
+            let x = e.target.value.replace(/\D/g, '').match(/(\d{0,3})(\d{0,3})(\d{0,4})/);
+            e.target.value = !x[2] ? x[1] : '(' + x[1] + ') ' + x[2] + (x[3] ? '-' + x[3] : '');
+        });
+    }
+
+    function validateFiscalData() {
+        formData.fiscales.rfc = document.getElementById('rfc').value;
+        formData.fiscales.representante = document.getElementById('representante').value;
+        formData.fiscales.telefono = document.getElementById('telefono').value;
+        formData.fiscales.email = document.getElementById('email').value;
+
+        if (!formData.fiscales.rfc || !formData.fiscales.representante || !formData.fiscales.telefono || !formData.fiscales.email) {
+            showToast('Por favor completa todos los campos obligatorios', 'error');
+            return false;
+        }
+        return true;
+    }
+
+    function validateBranches() {
+        if (formData.sucursales.length === 0) {
+            showToast('Debe registrar al menos una sucursal', 'warning');
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * BRANCH MANAGEMENT
+     */
+    function addBranch() {
+        if (formData.sucursales.length >= 10) {
+            showToast('Máximo 10 sucursales permitidas', 'warning');
+            return;
+        }
+
+        const newBranch = {
+            id: Date.now(),
+            nombre: '',
+            direccion: '',
+            lat: 20.967370,
+            lng: -89.623740,
+            horario: 'Lun-Vie 9:00-18:00',
+            telefono: '',
+            responsable: '',
+            cargo: ''
+        };
+
+        formData.sucursales.push(newBranch);
+        renderBranches();
+    }
+
+    function removeBranch(index) {
+        formData.sucursales.splice(index, 1);
+        renderBranches();
+    }
+
+    function updateBranchField(index, field, value) {
+        formData.sucursales[index][field] = value;
+        saveDraft();
+    }
+
+    function renderBranches() {
+        const container = document.getElementById('sucursales-container');
+        container.innerHTML = '';
+
+        formData.sucursales.forEach((branch, index) => {
+            const div = document.createElement('div');
+            div.className = 'branch-card bg-gray-50 rounded-xl p-6 border border-gray-100 mb-4 transition-all';
+            div.innerHTML = `
+                <div class="flex justify-between items-center mb-4">
+                    <h4 class="font-bold text-gray-700">Sucursal #${index + 1}</h4>
+                    <button onclick="removeBranch(${index})" class="text-red-400 hover:text-red-600 transition-colors">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="col-span-2">
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Nombre Comercial</label>
+                        <input type="text" value="${branch.nombre}" onchange="updateBranchField(${index}, 'nombre', this.value)"
+                            class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-ms-purple outline-none">
+                    </div>
+                    <div class="col-span-2 relative">
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Dirección Completa</label>
+                        <div class="flex space-x-2">
+                            <input type="text" value="${branch.direccion}" onchange="updateBranchField(${index}, 'direccion', this.value)"
+                                placeholder="Calle, Número, Colonia, CP"
+                                class="flex-grow px-3 py-2 rounded-lg border border-gray-200 focus:border-ms-purple outline-none">
+                            <button onclick="geocodeBranch(${index})" class="px-3 bg-purple-50 text-ms-purple rounded-lg hover:bg-purple-100 transition-colors">
+                                <i class="fas fa-search-location"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Coordenadas</label>
+                        <button onclick="openMapModal(${index})" class="w-full flex items-center justify-between px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-600">
+                            <span>${branch.lat.toFixed(4)}, ${branch.lng.toFixed(4)}</span>
+                            <i class="fas fa-map-marker-alt text-ms-pink"></i>
+                        </button>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Horario de Operación</label>
+                        <select onchange="updateBranchField(${index}, 'horario', this.value)" class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg outline-none text-sm">
+                            <option value="Lun-Vie 9:00-18:00" ${branch.horario === 'Lun-Vie 9:00-18:00' ? 'selected' : ''}>Lun-Vie 9:00-18:00</option>
+                            <option value="Lun-Sab 8:00-20:00" ${branch.horario === 'Lun-Sab 8:00-20:00' ? 'selected' : ''}>Lun-Sab 8:00-20:00</option>
+                            <option value="24 Horas" ${branch.horario === '24 Horas' ? 'selected' : ''}>24 Horas</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Responsable</label>
+                        <input type="text" value="${branch.responsable}" onchange="updateBranchField(${index}, 'responsable', this.value)"
+                            class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-ms-purple outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Cargo</label>
+                        <input type="text" value="${branch.cargo}" onchange="updateBranchField(${index}, 'cargo', this.value)"
+                            class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-ms-purple outline-none">
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    /**
+     * MAPS INTEGRATION (Google Maps o Stadia Maps via Leaflet)
+     */
+    function initMap() {
+        if (map) return;
+
+        const center = [20.967370, -89.623740];
+
+        if (window.google && !CONFIG_FRONT.STADIA_API_KEY) {
+            // Google Maps
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: center[0], lng: center[1] },
+                zoom: 12,
+                styles: mapStyles
+            });
+            updateMarkers();
+        } else if (window.L) {
+            // Leaflet with Stadia Maps
+            map = L.map('map').setView(center, 12);
+
+            const apiKey = CONFIG_FRONT.STADIA_API_KEY;
+            const tileUrl = apiKey
+                ? `https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=${apiKey}`
+                : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+            L.tileLayer(tileUrl, {
+                attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            updateMarkers();
+        }
+    }
+
+    function updateMarkers() {
+        if (!map) return;
+
+        // Clear old markers
+        if (window.google && map instanceof google.maps.Map) {
+            markers.forEach(m => m.setMap(null));
+            markers = [];
+            formData.sucursales.forEach(branch => {
+                const marker = new google.maps.Marker({
+                    position: { lat: branch.lat, lng: branch.lng },
+                    map: map,
+                    icon: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
+                });
+                markers.push(marker);
+            });
+        } else if (window.L) {
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+            formData.sucursales.forEach(branch => {
+                const marker = L.marker([branch.lat, branch.lng]).addTo(map)
+                    .bindPopup(`<b>${branch.nombre}</b><br>${branch.direccion}`);
+                markers.push(marker);
+            });
+        }
+    }
+
+    function geocodeBranch(index) {
+        const branch = formData.sucursales[index];
+        if (!branch.direccion) return;
+
+        showToast('Buscando ubicación...', 'info');
+        google.script.run.withSuccessHandler((result) => {
+            if (result) {
+                formData.sucursales[index].lat = result.lat;
+                formData.sucursales[index].lng = result.lng;
+                formData.sucursales[index].direccion = result.formatted_address;
+                renderBranches();
+                showToast('Dirección geocodificada', 'success');
+            } else {
+                showToast('No se encontró la dirección', 'error');
+            }
+        }).geocodificarDireccion(branch.direccion);
+    }
+
+    /**
+     * MAP MODAL
+     */
+    let modalMap = null;
+    let modalMarker = null;
+
+    function openMapModal(index) {
+        activeBranchIndex = index;
+        document.getElementById('map-modal').classList.remove('hidden');
+        document.getElementById('map-modal').classList.add('flex');
+
+        const branch = formData.sucursales[index];
+        const posArr = [branch.lat, branch.lng];
+        const posObj = { lat: branch.lat, lng: branch.lng };
+
+        if (!modalMap) {
+            if (window.google && !CONFIG_FRONT.STADIA_API_KEY) {
+                modalMap = new google.maps.Map(document.getElementById('modal-map'), {
+                    center: posObj,
+                    zoom: 15
+                });
+                modalMarker = new google.maps.Marker({
+                    position: posObj,
+                    map: modalMap,
+                    draggable: true
+                });
+            } else if (window.L) {
+                modalMap = L.map('modal-map').setView(posArr, 15);
+                const apiKey = CONFIG_FRONT.STADIA_API_KEY;
+                const tileUrl = apiKey
+                    ? `https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=${apiKey}`
+                    : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+                L.tileLayer(tileUrl).addTo(modalMap);
+                modalMarker = L.marker(posArr, {draggable: true}).addTo(modalMap);
+            }
+        } else {
+            if (window.google && modalMap instanceof google.maps.Map) {
+                modalMap.setCenter(posObj);
+                modalMarker.setPosition(posObj);
+            } else if (window.L) {
+                modalMap.setView(posArr, 15);
+                modalMarker.setLatLng(posArr);
+            }
+        }
+    }
+
+    function closeMapModal() {
+        document.getElementById('map-modal').classList.add('hidden');
+        document.getElementById('map-modal').classList.remove('flex');
+    }
+
+    function confirmMapLocation() {
+        let lat, lng;
+        if (window.google && modalMarker.getPosition) {
+            const pos = modalMarker.getPosition();
+            lat = pos.lat();
+            lng = pos.lng();
+        } else if (modalMarker.getLatLng) {
+            const pos = modalMarker.getLatLng();
+            lat = pos.lat;
+            lng = pos.lng;
+        }
+        formData.sucursales[activeBranchIndex].lat = lat;
+        formData.sucursales[activeBranchIndex].lng = lng;
+        renderBranches();
+        closeMapModal();
+    }
+
+    /**
+     * SUBMISSION
+     */
+    function submitRegistration() {
+        const btn = document.getElementById('submit-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Procesando...';
+
+        google.script.run.withSuccessHandler((response) => {
+            if (response.success) {
+                registeredEmpresaId = response.empresaId;
+                showStep(4);
+                loadTrackingData(response.empresaId);
+                localStorage.removeItem('ms_draft');
+                showToast('¡Registro completado!', 'success');
+            } else {
+                showToast('Error: ' + response.error, 'error');
+                btn.disabled = false;
+                btn.innerHTML = 'Completar Registro <i class="fas fa-check-circle ml-2"></i>';
+            }
+        }).procesarRegistroCompleto(formData);
+    }
+
+    /**
+     * TRACKING PANEL LOGIC
+     */
+    function loadTrackingData(id) {
+        document.getElementById('tracking-company-id').innerText = id;
+        // Generar QR dinámico (usando API de Google Charts para rapidez)
+        const qrUrl = `https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl=${encodeURIComponent(id)}&choe=UTF-8`;
+        document.getElementById('qr-image').src = qrUrl;
+
+        google.script.run.withSuccessHandler((data) => {
+            if (data.error) {
+                showToast('No se pudo cargar la información de seguimiento', 'error');
+                return;
+            }
+
+            // Actualizar UI de Estatus
+            const statusLabel = document.getElementById('badge-status-label');
+            statusLabel.innerText = data.estatus;
+
+            const progressInner = document.getElementById('progress-inner');
+            const progressText = document.getElementById('progress-text');
+            progressInner.style.width = data.progreso + '%';
+            progressText.innerText = data.progreso + '%';
+
+            // Renderizar Capacitaciones
+            const trainingList = document.getElementById('training-list');
+            if (data.capacitaciones && data.capacitaciones.length > 0) {
+                trainingList.innerHTML = data.capacitaciones.map(t => `
+                    <div class="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg border-l-4 border-ms-pink">
+                        <div class="flex-grow">
+                            <p class="text-sm font-bold text-gray-700">${t.tipo}</p>
+                            <p class="text-xs text-gray-400">${t.fecha} • ${t.asistentes} asistentes</p>
+                        </div>
+                        ${t.evidencia ? `<a href="${t.evidencia}" target="_blank" class="text-ms-pink"><i class="fas fa-image"></i></a>` : ''}
+                    </div>
+                `).join('');
+            }
+
+            // Renderizar Plan de Trabajo
+            const workplanList = document.getElementById('workplan-list');
+            if (data.planTrabajo && data.planTrabajo.length > 0) {
+                workplanList.innerHTML = data.planTrabajo.map(p => `
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                            <p class="text-sm font-medium text-gray-700">${p.actividad}</p>
+                            <p class="text-[10px] text-gray-400 uppercase font-bold">${p.fecha}</p>
+                        </div>
+                        <span class="text-[10px] px-2 py-1 rounded-full ${p.estatus === 'Completado' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'} font-bold">
+                            ${p.estatus}
+                        </span>
+                    </div>
+                `).join('');
+            }
+
+            // Si hay sucursales, actualizarlas en el mapa si estamos en esa vista (o permitir regresar)
+            if (data.sucursales) {
+                formData.sucursales = data.sucursales;
+                // No llamamos a initMap aquí a menos que sea necesario
+            }
+        }).obtenerEstatusInsignia(id);
+    }
+
+    /**
+     * PERSISTENCE (LocalStorage)
+     */
+    function saveDraft() {
+        localStorage.setItem('ms_draft', JSON.stringify({
+            fiscales: formData.fiscales,
+            sucursales: formData.sucursales,
+            step: currentStep
+        }));
+        document.getElementById('status-badge').classList.remove('hidden');
+        setTimeout(() => document.getElementById('status-badge').classList.add('hidden'), 2000);
+    }
+
+    function loadDraft() {
+        const draft = localStorage.getItem('ms_draft');
+        if (draft) {
+            const data = JSON.parse(draft);
+            formData.fiscales = data.fiscales;
+            formData.sucursales = data.sucursales || [];
+
+            // Fill UI
+            document.getElementById('rfc').value = formData.fiscales.rfc || '';
+            document.getElementById('representante').value = formData.fiscales.representante || '';
+            document.getElementById('telefono').value = formData.fiscales.telefono || '';
+            document.getElementById('email').value = formData.fiscales.email || '';
+        } else {
+            // First run: add one branch
+            addBranch();
+        }
+    }
+
+    function initAutoSave() {
+        setInterval(() => {
+            if (currentStep < 4) saveDraft();
+        }, 30000);
+    }
+
+    /**
+     * UTILS
+     */
+    function showToast(message, type = 'info') {
+        const toast = document.getElementById('toast');
+        const icon = document.getElementById('toast-icon');
+        const text = document.getElementById('toast-message');
+
+        const colors = {
+            success: 'bg-green-500',
+            error: 'bg-red-500',
+            warning: 'bg-yellow-500',
+            info: 'bg-blue-500'
+        };
+
+        const icons = {
+            success: 'fa-check-circle',
+            error: 'fa-exclamation-triangle',
+            warning: 'fa-exclamation-circle',
+            info: 'fa-info-circle'
+        };
+
+        toast.className = `fixed bottom-8 right-8 px-6 py-3 rounded-xl shadow-2xl text-white font-semibold transition-all duration-300 z-[1000] flex items-center space-x-3 ${colors[type]}`;
+        icon.className = `fas ${icons[type]}`;
+        text.innerText = message;
+
+        toast.classList.remove('translate-y-24');
+        setTimeout(() => toast.classList.add('translate-y-24'), 4000);
+    }
+
+    const mapStyles = [
+        { "featureType": "administrative", "elementType": "labels.text.fill", "stylers": [{ "color": "#444444" }] },
+        { "featureType": "landscape", "elementType": "all", "stylers": [{ "color": "#f2f2f2" }] },
+        { "featureType": "poi", "elementType": "all", "stylers": [{ "visibility": "off" }] }
+    ];
+
+    function downloadPDF() {
+        showToast('Generando documento...', 'info');
+        google.script.run.withSuccessHandler((url) => {
+            window.open(url, '_blank');
+        }).generarCredencialPDF(formData.fiscales.rfc);
+    }
+</script>
+
+<!-- Carga asíncrona de Google Maps API (Solo si se proporciona KEY) -->
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=mapsInitCallback"></script>
+<script>
+    function mapsInitCallback() {
+        mapsLoaded = true;
+        if (currentStep === 3) initMap();
+    }
+</script>
+
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            // En Google Apps Script, el Service Worker tiene restricciones de dominio,
+            // pero podemos registrarlo de forma básica para PWA
+            console.log('PWA Ready');
+        }
+    </script>
+</body>
+</html>

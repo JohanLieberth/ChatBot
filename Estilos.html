@@ -1,0 +1,134 @@
+<style>
+    :root {
+        --ms-pink: #ec4899;
+        --ms-purple: #9333ea;
+        --ms-pink-light: #fce7f3;
+        --ms-purple-light: #f3e8ff;
+    }
+
+    body {
+        font-family: 'Inter', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Page Transitions */
+    .page-transition {
+        animation: slideIn 0.5s ease-out forwards;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Form Validation Styles */
+    .form-group.invalid input {
+        border-color: #ef4444;
+        background-color: #fef2f2;
+    }
+
+    .form-group.valid input {
+        border-color: #10b981;
+        background-color: #f0fdf4;
+    }
+
+    .validation-status i {
+        font-size: 1.2rem;
+    }
+
+    .validation-status.valid i::before {
+        content: '\f058';
+        color: #10b981;
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+    }
+
+    .validation-status.invalid i::before {
+        content: '\f06a';
+        color: #ef4444;
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #d1d5db;
+        border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #9ca3af;
+    }
+
+    /* Branch Card Styles */
+    .branch-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border-left-width: 4px;
+        border-left-color: transparent;
+    }
+
+    .branch-card:hover {
+        border-left-color: var(--ms-pink);
+        transform: translateX(5px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    .branch-card.collapsed {
+        height: 60px;
+        overflow: hidden;
+    }
+
+    /* Map Tooltip Customization */
+    .gm-style-iw {
+        padding: 0 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .gm-style-iw-d {
+        overflow: hidden !important;
+    }
+
+    /* Floating Labels */
+    .floating-label-group {
+        position: relative;
+    }
+
+    /* Loading Spinner */
+    .loader {
+        border: 3px solid #f3f3f3;
+        border-radius: 50%;
+        border-top: 3px solid var(--ms-purple);
+        width: 24px;
+        height: 24px;
+        animation: spin 1s linear infinite;
+        display: inline-block;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 640px) {
+        .page-transition {
+            padding: 1.5rem;
+        }
+    }
+</style>
