@@ -400,8 +400,15 @@
       document.getElementById('confirmation').classList.remove('hidden');
       document.getElementById('finalFolio').innerText = result.folio;
 
+      const qrData = JSON.stringify({
+        folio: result.folio,
+        razonSocial: state.fiscalData.razonSocial,
+        fecha: new Date().toLocaleDateString(),
+        estatus: "En revisión"
+      });
+
       // Generate QR using Google Charts API
-      const qrUrl = `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${result.folio}&choe=UTF-8`;
+      const qrUrl = `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(qrData)}&choe=UTF-8`;
       document.getElementById('qrCode').src = qrUrl;
     } else {
       alert('Error: ' + result.message);
@@ -416,17 +423,71 @@
     document.getElementById('submitBtn').innerText = 'Confirmar Registro';
   }
 
-  // --- GEOLOCATION ---
+  // --- GOOGLE MAPS & GEOLOCATION ---
+  let map, marker;
+
+  function initMap() {
+    const defaultLocation = { lat: 19.4326, lng: -99.1332 }; // Mexico City
+    map = new google.maps.Map(document.getElementById("map"), {
+      zoom: 12,
+      center: defaultLocation,
+      disableDefaultUI: false,
+      zoomControl: true,
+    });
+
+    marker = new google.maps.Marker({
+      position: defaultLocation,
+      map: map,
+      draggable: true,
+      title: "Arrastra para marcar la ubicación",
+    });
+
+    // Update coordinates when marker is dragged
+    marker.addListener("dragend", () => {
+      const pos = marker.getPosition();
+      updateInputsFromMap(pos.lat(), pos.lng());
+    });
+
+    // Update marker and inputs when map is clicked
+    map.addListener("click", (e) => {
+      const pos = e.latLng;
+      marker.setPosition(pos);
+      updateInputsFromMap(pos.lat(), pos.lng());
+    });
+  }
+
+  function updateInputsFromMap(lat, lng) {
+    document.getElementById('lat').value = lat.toFixed(6);
+    document.getElementById('lng').value = lng.toFixed(6);
+  }
+
+  function updateMapFromInputs() {
+    const lat = parseFloat(document.getElementById('lat').value);
+    const lng = parseFloat(document.getElementById('lng').value);
+
+    if (!isNaN(lat) && !isNaN(lng)) {
+      const pos = { lat, lng };
+      marker.setPosition(pos);
+      map.setCenter(pos);
+    }
+  }
+
   function getLocation() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(position => {
-        document.getElementById('lat').value = position.coords.latitude.toFixed(6);
-        document.getElementById('lng').value = position.coords.longitude.toFixed(6);
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        updateInputsFromMap(lat, lng);
+
+        const pos = { lat, lng };
+        marker.setPosition(pos);
+        map.setCenter(pos);
+        map.setZoom(17);
       }, error => {
-        alert('No se pudo obtener la ubicación.');
+        alert('No se pudo obtener la ubicación actual.');
       });
     } else {
-      alert('Geolocalización no soportada.');
+      alert('Geolocalización no soportada en este navegador.');
     }
   }
 

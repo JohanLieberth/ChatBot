@@ -16,6 +16,7 @@ Este sistema está desarrollado para funcionar sobre la plataforma de Google App
    - `CSS.html`
    - `JS.html`
 3. En `Código.gs`, busque la variable `SPREADSHEET_ID` y reemplace `YOUR_SPREADSHEET_ID` con el ID de su hoja de cálculo.
+4. En `Index.html`, busque la línea que carga el script de Google Maps y reemplace `YOUR_API_KEY` por una API Key válida con la **Maps JavaScript API** habilitada.
 
 ## 3. Despliegue de la Web App
 1. Haga clic en el botón `Implementar` (Deploy) > `Nueva implementación`.

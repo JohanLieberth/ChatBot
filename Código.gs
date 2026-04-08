@@ -18,7 +18,6 @@ function include(filename) {
 /**
  * DATABASE OPERATIONS
  */
-const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID'; // To be configured by user
 
 function getSheet(sheetName) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -193,6 +192,25 @@ function sendConfirmationEmail(email, folio, razonSocial) {
 /**
  * RE-ENTRY AND WORK PLAN
  */
+function getEmpresaBranches(folio) {
+  const sheet = getSheet('Sucursales');
+  const data = sheet.getDataRange().getValues();
+  const branches = [];
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][1] === folio) {
+      branches.push({
+        nombre: data[i][2],
+        direccion: data[i][3],
+        lat: data[i][4],
+        lng: data[i][5],
+        telefono: data[i][8],
+        responsable: data[i][9]
+      });
+    }
+  }
+  return branches;
+}
+
 function validateRFC(rfc) {
   const userEmail = Session.getActiveUser().getEmail() || 'anonymous';
   const props = PropertiesService.getUserProperties();

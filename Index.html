@@ -5,6 +5,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <?!= include('CSS'); ?>
+    <!-- Google Maps API - The API key should be added here or configured -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap" async defer></script>
   </head>
   <body>
     <div class="container">
@@ -84,19 +86,21 @@
               <textarea id="branchAddress" class="form-control" rows="2"></textarea>
             </div>
 
-            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
               <div style="flex: 1;">
                 <label>Latitud</label>
-                <input type="text" id="lat" class="form-control" readonly>
+                <input type="number" id="lat" class="form-control" step="0.000001" oninput="updateMapFromInputs()">
               </div>
               <div style="flex: 1;">
                 <label>Longitud</label>
-                <input type="text" id="lng" class="form-control" readonly>
+                <input type="number" id="lng" class="form-control" step="0.000001" oninput="updateMapFromInputs()">
               </div>
               <div style="display: flex; align-items: flex-end;">
-                <button type="button" class="btn btn-outline" style="padding: 12px;" onclick="getLocation()" title="Obtener ubicación"><i class="fa fa-location-dot"></i></button>
+                <button type="button" class="btn btn-outline" style="padding: 12px;" onclick="getLocation()" title="Obtener ubicación actual"><i class="fa fa-location-crosshairs"></i></button>
               </div>
             </div>
+
+            <div id="map" style="width: 100%; height: 250px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd;"></div>
 
             <div class="form-group">
               <label for="branchSchedule">Horario de Atención</label>

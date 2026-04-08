@@ -59,8 +59,15 @@
           </div>
         </div>
 
+        <!-- SECTIONS NAV -->
+        <div style="display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 10px;">
+          <button class="btn btn-primary" style="width: auto; white-space: nowrap;" onclick="switchSection('workplan')"><i class="fa fa-tasks"></i> Plan de Trabajo</button>
+          <button class="btn btn-outline" style="width: auto; white-space: nowrap;" onclick="switchSection('branches')"><i class="fa fa-store"></i> Mis Sucursales</button>
+          <button class="btn btn-outline" style="width: auto; white-space: nowrap;" onclick="switchSection('messages')"><i class="fa fa-envelope"></i> Buzón</button>
+        </div>
+
         <!-- WORK PLAN SECTION -->
-        <div class="card">
+        <div id="section-workplan" class="panel-section card">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h2 style="margin: 0;"><i class="fa fa-tasks"></i> Plan de Trabajo</h2>
             <button class="btn btn-accent" style="width: auto;" onclick="toggleActivityForm()"><i class="fa fa-plus"></i> Nueva Actividad</button>
@@ -101,11 +108,43 @@
             <p class="text-center" style="color: #999;">Cargando actividades...</p>
           </div>
         </div>
+
+        <!-- BRANCHES SECTION -->
+        <div id="section-branches" class="panel-section card hidden">
+          <h2><i class="fa fa-store"></i> Mis Sucursales</h2>
+          <div id="panelMap" style="width: 100%; height: 300px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd;"></div>
+          <div id="panelBranchesList">
+             <p class="text-center" style="color: #999;">Cargando sucursales...</p>
+          </div>
+        </div>
+
+        <!-- MESSAGES SECTION -->
+        <div id="section-messages" class="panel-section card hidden">
+          <h2><i class="fa fa-envelope"></i> Buzón de Comunicación</h2>
+          <p style="color: #666;">Mensajes y notificaciones del equipo evaluador.</p>
+          <div id="messagesList" style="margin-top: 20px;">
+             <p class="text-center" style="color: #999; padding: 20px; background: #f9f9f9; border-radius: 8px;">No hay mensajes nuevos.</p>
+          </div>
+        </div>
+
       </div>
     </div>
 
+    <!-- Scripts to be updated -->
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY" async defer></script>
     <script>
       let currentEmpresa = null;
+      let panelMap, markers = [];
+
+      function switchSection(sectionId) {
+        document.querySelectorAll('.panel-section').forEach(el => el.classList.add('hidden'));
+        document.getElementById(`section-${sectionId}`).classList.remove('hidden');
+
+        if (sectionId === 'branches') {
+          loadBranches();
+        }
+      }
 
       function login() {
         const rfc = document.getElementById('loginRfc').value;
@@ -148,6 +187,76 @@
         document.getElementById('login-section').classList.remove('hidden');
         document.getElementById('dashboard-section').classList.add('hidden');
         document.getElementById('loginRfc').value = '';
+        switchSection('workplan'); // Reset to default
+      }
+
+      function loadBranches() {
+        google.script.run
+          .withSuccessHandler(branches => {
+            const list = document.getElementById('panelBranchesList');
+            list.innerHTML = '';
+
+            initPanelMap(branches);
+
+            branches.forEach(b => {
+              const card = document.createElement('div');
+              card.className = 'card';
+              card.style.padding = '15px';
+
+              const qrData = JSON.stringify({
+                folio: currentEmpresa.folio,
+                sucursal: b.nombre,
+                razonSocial: currentEmpresa.razonSocial,
+                estatus: currentEmpresa.estatus
+              });
+              const qrUrl = `https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl=${encodeURIComponent(qrData)}&choe=UTF-8`;
+
+              card.innerHTML = `
+                <div style="display: flex; gap: 15px; align-items: center;">
+                  <img src="${qrUrl}" style="width: 80px; height: 80px; border: 1px solid #eee;">
+                  <div style="flex: 1;">
+                    <strong>${b.nombre}</strong><br>
+                    <small>${b.direccion}</small>
+                  </div>
+                  <a href="${qrUrl}" target="_blank" class="btn btn-outline" style="width: auto; font-size: 12px;"><i class="fa fa-download"></i> QR</a>
+                </div>
+              `;
+              list.appendChild(card);
+            });
+          })
+          .getEmpresaBranches(currentEmpresa.folio);
+      }
+
+      function initPanelMap(branches) {
+        if (!panelMap) {
+          panelMap = new google.maps.Map(document.getElementById("panelMap"), {
+            zoom: 5,
+            center: { lat: 19.4326, lng: -99.1332 }
+          });
+        }
+
+        // Clear existing markers
+        markers.forEach(m => m.setMap(null));
+        markers = [];
+
+        const bounds = new google.maps.LatLngBounds();
+
+        branches.forEach(b => {
+          if (b.lat && b.lng) {
+            const pos = { lat: parseFloat(b.lat), lng: parseFloat(b.lng) };
+            const marker = new google.maps.Marker({
+              position: pos,
+              map: panelMap,
+              title: b.nombre
+            });
+            markers.push(marker);
+            bounds.extend(pos);
+          }
+        });
+
+        if (branches.length > 0) {
+          panelMap.fitBounds(bounds);
+        }
       }
 
       function loadWorkPlan() {
