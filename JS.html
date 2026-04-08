@@ -423,71 +423,43 @@
     document.getElementById('submitBtn').innerText = 'Confirmar Registro';
   }
 
-  // --- GOOGLE MAPS & GEOLOCATION ---
-  let map, marker;
-
-  function initMap() {
-    const defaultLocation = { lat: 19.4326, lng: -99.1332 }; // Mexico City
-    map = new google.maps.Map(document.getElementById("map"), {
-      zoom: 12,
-      center: defaultLocation,
-      disableDefaultUI: false,
-      zoomControl: true,
-    });
-
-    marker = new google.maps.Marker({
-      position: defaultLocation,
-      map: map,
-      draggable: true,
-      title: "Arrastra para marcar la ubicación",
-    });
-
-    // Update coordinates when marker is dragged
-    marker.addListener("dragend", () => {
-      const pos = marker.getPosition();
-      updateInputsFromMap(pos.lat(), pos.lng());
-    });
-
-    // Update marker and inputs when map is clicked
-    map.addListener("click", (e) => {
-      const pos = e.latLng;
-      marker.setPosition(pos);
-      updateInputsFromMap(pos.lat(), pos.lng());
-    });
-  }
-
+  // --- GEOLOCATION & EXTERNAL MAPS ---
   function updateInputsFromMap(lat, lng) {
     document.getElementById('lat').value = lat.toFixed(6);
     document.getElementById('lng').value = lng.toFixed(6);
   }
 
-  function updateMapFromInputs() {
-    const lat = parseFloat(document.getElementById('lat').value);
-    const lng = parseFloat(document.getElementById('lng').value);
-
-    if (!isNaN(lat) && !isNaN(lng)) {
-      const pos = { lat, lng };
-      marker.setPosition(pos);
-      map.setCenter(pos);
-    }
+  function openExternalMap() {
+    // Open Google Maps to allow user to find coordinates
+    window.open('https://www.google.com/maps', '_blank');
   }
 
   function getLocation() {
+    const btn = event.currentTarget;
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Obteniendo...';
+
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(position => {
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
         updateInputsFromMap(lat, lng);
-
-        const pos = { lat, lng };
-        marker.setPosition(pos);
-        map.setCenter(pos);
-        map.setZoom(17);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
       }, error => {
-        alert('No se pudo obtener la ubicación actual.');
+        alert('No se pudo obtener la ubicación actual. Verifique sus permisos de GPS.');
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }, {
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 0
       });
     } else {
       alert('Geolocalización no soportada en este navegador.');
+      btn.disabled = false;
+      btn.innerHTML = originalText;
     }
   }
 
