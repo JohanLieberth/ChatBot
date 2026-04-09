@@ -177,8 +177,7 @@
   function addBranch() {
     const nombre = document.getElementById('branchName').value;
     const direccion = document.getElementById('branchAddress').value;
-    const lat = document.getElementById('lat').value;
-    const lng = document.getElementById('lng').value;
+    const coordsRaw = document.getElementById('coords').value;
     const responsable = document.getElementById('branchManager').value;
     const cargo = document.getElementById('branchPosition').value;
     const telefono = document.getElementById('branchPhone').value;
@@ -186,6 +185,15 @@
     if (!nombre || !direccion || !responsable) {
       alert('Complete los campos obligatorios de la sucursal.');
       return;
+    }
+
+    let lat = '', lng = '';
+    if (coordsRaw) {
+      const parts = coordsRaw.split(',').map(s => s.trim());
+      if (parts.length === 2) {
+        lat = parts[0];
+        lng = parts[1];
+      }
     }
 
     const branch = {
@@ -213,8 +221,7 @@
 
     // Clear form
     document.getElementById('branchForm').reset();
-    document.getElementById('lat').value = '';
-    document.getElementById('lng').value = '';
+    document.getElementById('coords').value = '';
   }
 
   function removeBranch(index) {
@@ -425,8 +432,7 @@
 
   // --- GEOLOCATION & EXTERNAL MAPS ---
   function updateInputsFromMap(lat, lng) {
-    document.getElementById('lat').value = lat.toFixed(6);
-    document.getElementById('lng').value = lng.toFixed(6);
+    document.getElementById('coords').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
   }
 
   function openExternalMap() {
