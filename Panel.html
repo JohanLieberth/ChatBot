@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <?!= include('CSS'); ?>
+    <style>
+      .status-banner {
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        font-weight: 600;
+      }
+      .status-En-revisión { background: #e3f2fd; color: #1976d2; }
+      .status-Plan-de-trabajo-asignado { background: #fff3e0; color: #f57c00; }
+      .status-En-implementación { background: #f3e5f5; color: #7b1fa2; }
+      .status-Evaluación { background: #e0f2f1; color: #00796b; }
+      .status-Insignia-Otorgada { background: #e8f5e9; color: #388e3c; }
+      .status-Rechazada { background: #ffebee; color: #d32f2f; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header class="text-center mt-4">
+        <h1>Panel de Empresa</h1>
+        <p style="color: #666;">Seguimiento y Plan de Trabajo</p>
+      </header>
+
+      <!-- LOGIN SECTION -->
+      <div id="login-section" class="card">
+        <h2><i class="fa fa-lock"></i> Acceso al Panel</h2>
+        <p>Ingrese su RFC registrado para acceder a su información.</p>
+        <div class="form-group">
+          <label for="loginRfc">RFC</label>
+          <input type="text" id="loginRfc" class="form-control" placeholder="ABC123456XYZ">
+        </div>
+        <button class="btn btn-primary" style="width: 100%;" onclick="login()">Acceder a mi panel <i class="fa fa-sign-in"></i></button>
+        <p class="text-center mt-4"><a href="?page=Index" style="color: var(--primary); text-decoration: none;">¿No está registrado? Regístrese aquí</a></p>
+      </div>
+
+      <!-- DASHBOARD SECTION (Hidden by default) -->
+      <div id="dashboard-section" class="hidden">
+        <div id="statusBanner" class="status-banner">
+           <i class="fa fa-info-circle"></i>
+           <span>Estatus: <span id="currentStatus"></span></span>
+        </div>
+
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <h2 id="empresaNombre" style="margin-bottom: 5px;"></h2>
+              <p id="empresaFolio" style="color: #666; font-family: monospace;"></p>
+            </div>
+            <button class="btn btn-outline" style="width: auto;" onclick="logout()">Salir</button>
+          </div>
+        </div>
+
+        <!-- SECTIONS NAV -->
+        <div style="display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 10px;">
+          <button class="btn btn-primary" style="width: auto; white-space: nowrap;" onclick="switchSection('workplan')"><i class="fa fa-tasks"></i> Plan de Trabajo</button>
+          <button class="btn btn-outline" style="width: auto; white-space: nowrap;" onclick="switchSection('branches')"><i class="fa fa-store"></i> Mis Sucursales</button>
+          <button class="btn btn-outline" style="width: auto; white-space: nowrap;" onclick="switchSection('messages')"><i class="fa fa-envelope"></i> Buzón</button>
+        </div>
+
+        <!-- WORK PLAN SECTION -->
+        <div id="section-workplan" class="panel-section card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0;"><i class="fa fa-tasks"></i> Plan de Trabajo</h2>
+            <button class="btn btn-accent" style="width: auto;" onclick="toggleActivityForm()"><i class="fa fa-plus"></i> Nueva Actividad</button>
+          </div>
+
+          <div id="activityForm" class="hidden" style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd;">
+            <h3>Agregar Actividad</h3>
+            <div class="form-group">
+              <label>Nombre de la actividad</label>
+              <input type="text" id="actNombre" class="form-control">
+            </div>
+            <div class="form-group">
+              <label>Descripción detallada</label>
+              <textarea id="actDesc" class="form-control" rows="3"></textarea>
+            </div>
+            <div style="display: flex; gap: 10px;">
+              <div class="form-group" style="flex: 1;">
+                <label>Responsable</label>
+                <input type="text" id="actResp" class="form-control">
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label>Fecha Compromiso</label>
+                <input type="date" id="actFecha" class="form-control">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Evidencias (PDF, JPG, PNG - Máx 10MB)</label>
+              <input type="file" id="actFiles" class="form-control" multiple accept=".pdf,.jpg,.jpeg,.png">
+              <div id="fileList" style="font-size: 12px; color: #666; margin-top: 5px;"></div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+              <button id="saveActBtn" class="btn btn-primary" onclick="handleSaveActivity()">Guardar Actividad</button>
+              <button class="btn btn-outline" onclick="toggleActivityForm()">Cancelar</button>
+            </div>
+          </div>
+
+          <div id="activitiesList">
+            <p class="text-center" style="color: #999;">Cargando actividades...</p>
+          </div>
+        </div>
+
+        <!-- BRANCHES SECTION -->
+        <div id="section-branches" class="panel-section card hidden">
+          <h2><i class="fa fa-store"></i> Mis Sucursales</h2>
+          <p style="color: #666; margin-bottom: 20px;">Listado de ubicaciones registradas y sus credenciales.</p>
+          <div id="panelBranchesList">
+             <p class="text-center" style="color: #999;">Cargando sucursales...</p>
+          </div>
+        </div>
+
+        <!-- MESSAGES SECTION -->
+        <div id="section-messages" class="panel-section card hidden">
+          <h2><i class="fa fa-envelope"></i> Buzón de Comunicación</h2>
+          <p style="color: #666;">Mensajes y notificaciones del equipo evaluador.</p>
+          <div id="messagesList" style="margin-top: 20px;">
+             <p class="text-center" style="color: #999; padding: 20px; background: #f9f9f9; border-radius: 8px;">No hay mensajes nuevos.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+      let currentEmpresa = null;
+
+      function switchSection(sectionId) {
+        document.querySelectorAll('.panel-section').forEach(el => el.classList.add('hidden'));
+        document.getElementById(`section-${sectionId}`).classList.remove('hidden');
+
+        if (sectionId === 'branches') {
+          loadBranches();
+        }
+      }
+
+      function login() {
+        const rfc = document.getElementById('loginRfc').value;
+        if (!rfc) return alert('Ingrese su RFC');
+
+        const btn = document.querySelector('#login-section .btn');
+        btn.disabled = true;
+        btn.innerText = 'Validando...';
+
+        google.script.run
+          .withSuccessHandler(result => {
+            if (result.success) {
+              currentEmpresa = result.empresa;
+              showDashboard();
+            } else {
+              alert(result.message);
+              btn.disabled = false;
+              btn.innerText = 'Acceder a mi panel';
+            }
+          })
+          .validateRFC(rfc);
+      }
+
+      function showDashboard() {
+        document.getElementById('login-section').classList.add('hidden');
+        document.getElementById('dashboard-section').classList.remove('hidden');
+
+        document.getElementById('empresaNombre').innerText = currentEmpresa.razonSocial;
+        document.getElementById('empresaFolio').innerText = currentEmpresa.folio;
+        document.getElementById('currentStatus').innerText = currentEmpresa.estatus;
+
+        const banner = document.getElementById('statusBanner');
+        banner.className = 'status-banner status-' + currentEmpresa.estatus.replace(/\s+/g, '-');
+
+        loadWorkPlan();
+      }
+
+      function logout() {
+        currentEmpresa = null;
+        document.getElementById('login-section').classList.remove('hidden');
+        document.getElementById('dashboard-section').classList.add('hidden');
+        document.getElementById('loginRfc').value = '';
+        switchSection('workplan'); // Reset to default
+      }
+
+      function loadBranches() {
+        google.script.run
+          .withSuccessHandler(branches => {
+            const list = document.getElementById('panelBranchesList');
+            list.innerHTML = '';
+
+            branches.forEach(b => {
+              const card = document.createElement('div');
+              card.className = 'card';
+              card.style.padding = '15px';
+
+              const qrData = JSON.stringify({
+                folio: currentEmpresa.folio,
+                sucursal: b.nombre,
+                razonSocial: currentEmpresa.razonSocial,
+                estatus: currentEmpresa.estatus
+              });
+              const qrUrl = `https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl=${encodeURIComponent(qrData)}&choe=UTF-8`;
+              const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${b.lat},${b.lng}`;
+
+              card.innerHTML = `
+                <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                  <img src="${qrUrl}" style="width: 80px; height: 80px; border: 1px solid #eee;">
+                  <div style="flex: 1; min-width: 200px;">
+                    <strong>${b.nombre}</strong><br>
+                    <small>${b.direccion}</small><br>
+                    <small style="color: #999;">${b.lat}, ${b.lng}</small>
+                  </div>
+                  <div style="display: flex; gap: 5px;">
+                    <a href="${mapsUrl}" target="_blank" class="btn btn-outline" style="width: auto; font-size: 12px;"><i class="fa fa-map-location-dot"></i> Mapa</a>
+                    <a href="${qrUrl}" target="_blank" class="btn btn-outline" style="width: auto; font-size: 12px;"><i class="fa fa-download"></i> QR</a>
+                  </div>
+                </div>
+              `;
+              list.appendChild(card);
+            });
+          })
+          .getEmpresaBranches(currentEmpresa.folio);
+      }
+
+      function loadWorkPlan() {
+        google.script.run
+          .withSuccessHandler(activities => {
+            const list = document.getElementById('activitiesList');
+            list.innerHTML = '';
+
+            if (activities.length === 0) {
+              list.innerHTML = '<p class="text-center" style="color: #999;">No hay actividades registradas aún.</p>';
+              return;
+            }
+
+            activities.forEach(act => {
+              const card = document.createElement('div');
+              card.className = 'card';
+              card.style.borderLeft = '4px solid ' + getStatusColor(act.estatus);
+              card.innerHTML = `
+                <div style="display: flex; justify-content: space-between;">
+                  <strong>${act.nombre}</strong>
+                  <span class="badge" style="background: ${getStatusColor(act.estatus)}22; color: ${getStatusColor(act.estatus)}">${act.estatus}</span>
+                </div>
+                <p style="font-size: 14px; margin: 10px 0;">${act.descripcion}</p>
+                <div style="font-size: 12px; color: #666; display: flex; justify-content: space-between;">
+                  <span><i class="fa fa-user"></i> ${act.responsable}</span>
+                  <span><i class="fa fa-calendar"></i> Vence: ${formatDate(act.fechaCompromiso)}</span>
+                </div>
+              `;
+              list.appendChild(card);
+            });
+          })
+          .getWorkPlan(currentEmpresa.folio);
+      }
+
+      function toggleActivityForm() {
+        const form = document.getElementById('activityForm');
+        form.classList.toggle('hidden');
+      }
+
+      async function handleSaveActivity() {
+        const name = document.getElementById('actNombre').value;
+        const date = document.getElementById('actFecha').value;
+        if (!name || !date) return alert('Nombre y Fecha son obligatorios');
+
+        const btn = document.getElementById('saveActBtn');
+        btn.disabled = true;
+        btn.innerText = 'Subiendo archivos...';
+
+        const fileInput = document.getElementById('actFiles');
+        const files = fileInput.files;
+        const evidenceUrls = [];
+
+        try {
+          for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            if (file.size > 10 * 1024 * 1024) {
+              alert(`El archivo ${file.name} excede los 10MB.`);
+              continue;
+            }
+            const base64Data = await readFileAsBase64(file);
+            const result = await uploadFileToServer(base64Data, file.name, currentEmpresa.folio);
+            evidenceUrls.push(result.url);
+          }
+
+          const activity = {
+            folio: currentEmpresa.folio,
+            nombre: name,
+            descripcion: document.getElementById('actDesc').value,
+            responsable: document.getElementById('actResp').value,
+            fechaCompromiso: date,
+            fechaInicio: new Date().toISOString().split('T')[0],
+            evidenciasUrl: evidenceUrls.join(', '),
+            estatus: 'Planeado'
+          };
+
+          google.script.run
+            .withSuccessHandler(() => {
+              btn.disabled = false;
+              btn.innerText = 'Guardar Actividad';
+              toggleActivityForm();
+              loadWorkPlan();
+              clearActivityForm();
+            })
+            .saveWorkPlanActivity(activity);
+
+        } catch (error) {
+          alert('Error al guardar actividad: ' + error);
+          btn.disabled = false;
+          btn.innerText = 'Guardar Actividad';
+        }
+      }
+
+      function readFileAsBase64(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      function uploadFileToServer(data, fileName, folderName) {
+        return new Promise((resolve, reject) => {
+          google.script.run
+            .withSuccessHandler(resolve)
+            .withFailureHandler(reject)
+            .uploadFile(data, fileName, folderName);
+        });
+      }
+
+      function clearActivityForm() {
+        document.getElementById('actNombre').value = '';
+        document.getElementById('actDesc').value = '';
+        document.getElementById('actResp').value = '';
+        document.getElementById('actFecha').value = '';
+        document.getElementById('actFiles').value = '';
+      }
+
+      function getStatusColor(status) {
+        switch(status) {
+          case 'Completado': return '#2ecc71';
+          case 'En proceso': return '#f1c40f';
+          default: return '#95a5a6';
+        }
+      }
+
+      function formatDate(dateStr) {
+        if (!dateStr) return 'N/A';
+        const d = new Date(dateStr);
+        return d.toLocaleDateString();
+      }
+    </script>
+  </body>
+</html>

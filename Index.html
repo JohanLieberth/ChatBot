@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <?!= include('CSS'); ?>
+  </head>
+  <body>
+    <div class="container">
+      <header class="text-center mt-4">
+        <h1 style="margin-bottom: 5px;">Mujeres Seguras</h1>
+        <p style="color: #666; margin-top: 0;">Registro de Organizaciones</p>
+      </header>
+
+      <div class="progress-container">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <div class="progress-steps">
+          <span id="step-indicator">Paso 1 de 5</span>
+          <a href="?page=Panel" style="color: var(--primary); font-weight: 500; text-decoration: none;">Reingresar <i class="fa fa-sign-in"></i></a>
+        </div>
+      </div>
+
+      <!-- STEP 1: FISCAL DATA -->
+      <div id="step-1" class="step-content">
+        <div class="card">
+          <h2><i class="fa fa-file-invoice"></i> Datos Fiscales</h2>
+          <p>Ingrese la información oficial de su empresa u organización.</p>
+
+          <div class="form-group">
+            <label for="rfc">RFC</label>
+            <input type="text" id="rfc" class="form-control" placeholder="ABC123456XYZ" maxlength="13">
+          </div>
+
+          <div class="form-group">
+            <label for="razonSocial">Razón Social</label>
+            <input type="text" id="razonSocial" class="form-control" placeholder="Nombre legal de la empresa">
+          </div>
+
+          <div class="form-group">
+            <label for="representante">Representante Legal</label>
+            <input type="text" id="representante" class="form-control" placeholder="Nombre completo">
+          </div>
+
+          <div class="form-group">
+            <label for="telefono">Teléfono de contacto</label>
+            <input type="tel" id="telefono" class="form-control" placeholder="10 dígitos" maxlength="10">
+          </div>
+
+          <div class="form-group">
+            <label for="email">Correo electrónico</label>
+            <input type="email" id="email" class="form-control" placeholder="ejemplo@correo.com">
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end;">
+          <button class="btn btn-primary" onclick="nextStep()">Siguiente <i class="fa fa-arrow-right"></i></button>
+        </div>
+      </div>
+
+      <!-- STEP 2: BRANCHES -->
+      <div id="step-2" class="step-content hidden">
+        <div class="card">
+          <h2><i class="fa fa-store"></i> Sucursales</h2>
+          <p>Registre cada una de las ubicaciones que formarán parte del programa.</p>
+
+          <div id="branchList" class="mt-4">
+            <!-- Dynamic list of branches -->
+          </div>
+
+          <hr class="mt-4">
+
+          <form id="branchForm">
+            <h3>Agregar Sucursal</h3>
+            <div class="form-group">
+              <label for="branchName">Nombre de la Sucursal</label>
+              <input type="text" id="branchName" class="form-control">
+            </div>
+
+            <div class="form-group">
+              <label for="branchAddress">Dirección Completa</label>
+              <textarea id="branchAddress" class="form-control" rows="2"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>Ubicación (Coordenadas: Latitud, Longitud)</label>
+              <input type="text" id="coords" class="form-control" placeholder="Ej: 19.4326, -99.1332">
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <button type="button" class="btn btn-outline" style="flex: 1;" onclick="getLocation()"><i class="fa fa-location-crosshairs"></i> Usar ubicación actual</button>
+                <button type="button" class="btn btn-outline" style="flex: 1;" onclick="openExternalMap()"><i class="fa fa-map-marker-alt"></i> Buscar en Google Maps</button>
+            </div>
+
+            <div class="form-group">
+              <label for="branchSchedule">Horario de Atención</label>
+              <input type="text" id="branchSchedule" class="form-control" placeholder="L-V 9:00 - 18:00, S 9:00 - 14:00">
+            </div>
+
+            <div class="form-group">
+              <label for="branchPhone">Teléfono Local</label>
+              <input type="tel" id="branchPhone" class="form-control" maxlength="10">
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+              <div style="flex: 1;" class="form-group">
+                <label for="branchManager">Responsable</label>
+                <input type="text" id="branchManager" class="form-control">
+              </div>
+              <div style="flex: 1;" class="form-group">
+                <label for="branchPosition">Cargo</label>
+                <input type="text" id="branchPosition" class="form-control">
+              </div>
+            </div>
+
+            <button type="button" class="btn btn-accent" style="width: 100%;" onclick="addBranch()"><i class="fa fa-plus"></i> Agregar Sucursal</button>
+          </form>
+        </div>
+
+        <div style="display: flex; justify-content: space-between;">
+          <button class="btn btn-outline" onclick="prevStep()"><i class="fa fa-arrow-left"></i> Anterior</button>
+          <button class="btn btn-primary" onclick="nextStep()">Siguiente <i class="fa fa-arrow-right"></i></button>
+        </div>
+      </div>
+
+      <!-- STEP 3: BRANCH COMMITMENTS -->
+      <div id="step-3" class="step-content hidden">
+        <div id="branchCommitmentsContainer">
+          <!-- Dynamic commitments per branch -->
+        </div>
+        <!-- Buttons are now dynamically rendered in JS.html -->
+      </div>
+
+      <!-- STEP 4: GENERAL COMMITMENTS -->
+      <div id="step-4" class="step-content hidden">
+        <div class="card">
+          <h2><i class="fa fa-handshake"></i> Compromisos Generales</h2>
+          <p>Estos compromisos aplican a todas las sucursales registradas.</p>
+
+          <div class="checkbox-group">
+            <input type="checkbox" id="gc1" onchange="updateGeneralComp('accesoTemporal', this.checked)">
+            <label for="gc1">
+              <strong>Permitir acceso temporal a mujeres en situación de riesgo</strong>
+              <small style="display: block; color: #666;">Brindar refugio inmediato mientras se contacta a las autoridades.</small>
+            </label>
+          </div>
+
+          <div class="checkbox-group">
+            <input type="checkbox" id="gc2" onchange="updateGeneralComp('espacioPrivado', this.checked)">
+            <label for="gc2">
+              <strong>Habilitar espacio privado para su resguardo</strong>
+              <small style="display: block; color: #666;">Un área segura donde la usuaria pueda esperar sin ser expuesta.</small>
+            </label>
+          </div>
+
+          <div class="checkbox-group">
+            <input type="checkbox" id="gc3" onchange="updateGeneralComp('telefonoEmergencia', this.checked)">
+            <label for="gc3">
+              <strong>Autorizar uso del teléfono para llamadas de emergencia</strong>
+              <small style="display: block; color: #666;">Facilitar la comunicación con el 911 o familiares.</small>
+            </label>
+          </div>
+
+          <div class="checkbox-group">
+            <input type="checkbox" id="gc4" onchange="updateGeneralComp('internetAutoridades', this.checked)">
+            <label for="gc4">
+              <strong>Permitir uso de internet para contactar autoridades</strong>
+              <small style="display: block; color: #666;">Uso de Wi-Fi para apps de emergencia o mensajería.</small>
+            </label>
+          </div>
+
+          <div class="checkbox-group">
+            <input type="checkbox" id="gc5" onchange="updateGeneralComp('distintivoVisible', this.checked)">
+            <label for="gc5">
+              <strong>Colocar visiblemente el distintivo "Mujeres Seguras"</strong>
+              <small style="display: block; color: #666;">Identificar el establecimiento como un punto seguro.</small>
+            </label>
+          </div>
+
+          <hr class="mt-4">
+
+          <div class="checkbox-group">
+            <input type="checkbox" id="terms" onchange="updateGeneralComp('terms', this.checked)">
+            <label for="terms">Acepto los términos y condiciones del programa.</label>
+          </div>
+
+          <div class="checkbox-group">
+            <input type="checkbox" id="privacy" onchange="updateGeneralComp('privacy', this.checked)">
+            <label for="privacy">He leído y acepto el aviso de privacidad (LFPDPPP).</label>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between;">
+          <button class="btn btn-outline" onclick="prevStep()"><i class="fa fa-arrow-left"></i> Anterior</button>
+          <button class="btn btn-primary" onclick="nextStep()">Siguiente <i class="fa fa-arrow-right"></i></button>
+        </div>
+      </div>
+
+      <!-- STEP 5: REVIEW -->
+      <div id="step-5" class="step-content hidden">
+        <div class="card">
+          <h2><i class="fa fa-check-circle"></i> Revisión y Confirmación</h2>
+          <p>Verifique que toda la información sea correcta antes de enviar.</p>
+
+          <h3>Datos Fiscales</h3>
+          <div id="summary-fiscal" style="background: #f9f9f9; padding: 15px; border-radius: 8px;"></div>
+
+          <h3 class="mt-4">Sucursales</h3>
+          <div id="summary-branches" style="background: #f9f9f9; padding: 15px; border-radius: 8px;"></div>
+
+          <div class="text-center mt-4">
+             <i class="fa fa-circle-check" style="color: var(--success); font-size: 24px;"></i>
+             <p>Todos los compromisos han sido aceptados.</p>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between;">
+          <button class="btn btn-outline" onclick="prevStep()"><i class="fa fa-arrow-left"></i> Anterior</button>
+          <button id="submitBtn" class="btn btn-primary" style="background-color: var(--primary);" onclick="submitRegistration()">CONFIRMAR REGISTRO <i class="fa fa-paper-plane"></i></button>
+        </div>
+      </div>
+
+      <!-- CONFIRMATION -->
+      <div id="confirmation" class="step-content hidden">
+        <div class="card text-center">
+          <div style="color: var(--success); font-size: 60px; margin-bottom: 20px;">
+            <i class="fa fa-circle-check"></i>
+          </div>
+          <h2>¡Registro Exitoso!</h2>
+          <p>Su solicitud ha sido recibida y se encuentra en revisión.</p>
+
+          <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin-bottom: 5px; color: #666;">Su Folio de Registro:</p>
+            <h1 id="finalFolio" style="margin: 0; color: var(--primary);"></h1>
+            <button class="btn btn-outline" style="width: auto; margin-top: 10px; font-size: 14px;" onclick="copyFolio()"><i class="fa fa-copy"></i> Copiar Folio</button>
+          </div>
+
+          <div class="mt-4">
+            <img id="qrCode" src="" alt="Código QR" style="max-width: 200px;">
+            <p><small>Este código QR contiene la información básica de su registro.</small></p>
+          </div>
+
+          <div class="mt-4">
+            <p>Se ha enviado un correo de confirmación a su dirección registrada.</p>
+            <button class="btn btn-primary" onclick="location.reload()">Regresar al Inicio</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <?!= include('JS'); ?>
+    <script>
+      function copyFolio() {
+        const folio = document.getElementById('finalFolio').innerText;
+        navigator.clipboard.writeText(folio);
+        alert('Folio copiado al portapapeles');
+      }
+    </script>
+  </body>
+</html>

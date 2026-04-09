@@ -1,0 +1,472 @@
+<script>
+  /**
+   * Frontend Logic for "Mujeres Seguras"
+   */
+
+  const state = {
+    currentStep: 1,
+    totalSteps: 5,
+    currentBranchIndex: 0,
+    fiscalData: {
+      rfc: '',
+      razonSocial: '',
+      representante: '',
+      telefono: '',
+      email: ''
+    },
+    branches: [],
+    generalCommitments: {
+      accesoTemporal: false,
+      espacioPrivado: false,
+      telefonoEmergencia: false,
+      internetAutoridades: false,
+      distintivoVisible: false,
+      terms: false,
+      privacy: false
+    }
+  };
+
+  // --- STEP NAVIGATION ---
+
+  function nextStep() {
+    if (validateCurrentStep()) {
+      if (state.currentStep < state.totalSteps) {
+        state.currentStep++;
+        updateUI();
+      }
+    }
+  }
+
+  function prevStep() {
+    if (state.currentStep > 1) {
+      state.currentStep--;
+      updateUI();
+    }
+  }
+
+  function goToStep(step) {
+    state.currentStep = step;
+    updateUI();
+  }
+
+  function updateUI() {
+    // Hide all steps
+    document.querySelectorAll('.step-content').forEach(el => el.classList.add('hidden'));
+
+    // Show current step
+    document.getElementById(`step-${state.currentStep}`).classList.remove('hidden');
+
+    // Update progress bar
+    const progress = ((state.currentStep - 1) / (state.totalSteps - 1)) * 100;
+    document.getElementById('progress-fill').style.width = `${progress}%`;
+    document.getElementById('step-indicator').innerText = `Paso ${state.currentStep} de ${state.totalSteps}`;
+
+    if (state.currentStep === 5) {
+      renderSummary();
+    }
+
+    window.scrollTo(0, 0);
+  }
+
+  // --- VALIDATIONS ---
+
+  function validateCurrentStep() {
+    const step = state.currentStep;
+    if (step === 1) {
+      return validateStep1();
+    } else if (step === 2) {
+      if (state.branches.length === 0) {
+        alert('Debe agregar al menos una sucursal.');
+        return false;
+      }
+      state.currentBranchIndex = 0; // Reset index when entering step 3
+      renderBranchCommitments();
+      return true;
+    } else if (step === 3) {
+      // Step 3 is now handled branch by branch inside renderBranchCommitments
+      return true;
+    } else if (step === 4) {
+      return validateStep4();
+    }
+    return true;
+  }
+
+  function validateStep1() {
+    const rfc = document.getElementById('rfc').value.toUpperCase().trim();
+    const razonSocial = document.getElementById('razonSocial').value;
+    const representante = document.getElementById('representante').value;
+    const telefono = document.getElementById('telefono').value;
+    const email = document.getElementById('email').value;
+
+    if (!validateRFC(rfc)) {
+      alert('RFC no válido.');
+      return false;
+    }
+    if (razonSocial.length < 3) {
+      alert('Razón Social debe tener al menos 3 caracteres.');
+      return false;
+    }
+    if (!representante) {
+      alert('Representante Legal es obligatorio.');
+      return false;
+    }
+    if (telefono.length !== 10) {
+      alert('Teléfono debe tener 10 dígitos.');
+      return false;
+    }
+    if (!validateEmail(email)) {
+      alert('Correo electrónico no válido.');
+      return false;
+    }
+
+    // Save to state
+    state.fiscalData = { rfc, razonSocial, representante, telefono, email };
+    return true;
+  }
+
+  // Real-time RFC check
+  document.getElementById('rfc')?.addEventListener('blur', function(e) {
+    const rfc = e.target.value.toUpperCase().trim();
+    if (validateRFC(rfc)) {
+      google.script.run
+        .withSuccessHandler(exists => {
+          if (exists) {
+            alert('Este RFC ya se encuentra registrado. Por favor verifique o use la opción de reingreso.');
+            e.target.style.borderColor = 'red';
+          } else {
+            e.target.style.borderColor = 'var(--success)';
+          }
+        })
+        .checkRFCExists(rfc);
+    }
+  });
+
+  function validateRFC(rfc) {
+    const re = /^([A-ZÑ&]{3,4}) ?(?:- ?)?(\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])) ?(?:- ?)?([A-Z\d]{2})([A\d])$/;
+    return re.test(rfc.toUpperCase());
+  }
+
+  function validateEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  }
+
+  function validateStep3() {
+    // Each branch must have all commitments checked
+    for (let i = 0; i < state.branches.length; i++) {
+      const b = state.branches[i].compromisos;
+      if (!b.protocolo || !b.proteccionCivil || !b.areaSeguimiento || !b.nom25 || !b.nom35) {
+        alert(`La sucursal "${state.branches[i].nombre}" no cumple con todos los compromisos obligatorios.`);
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function validateStep4() {
+    const gc = state.generalCommitments;
+    if (!gc.accesoTemporal || !gc.espacioPrivado || !gc.telefonoEmergencia || !gc.internetAutoridades || !gc.distintivoVisible || !gc.terms || !gc.privacy) {
+      alert('Debe aceptar todos los compromisos y términos.');
+      return false;
+    }
+    return true;
+  }
+
+  // --- BRANCH MANAGEMENT ---
+
+  function addBranch() {
+    const nombre = document.getElementById('branchName').value;
+    const direccion = document.getElementById('branchAddress').value;
+    const coordsRaw = document.getElementById('coords').value;
+    const responsable = document.getElementById('branchManager').value;
+    const cargo = document.getElementById('branchPosition').value;
+    const telefono = document.getElementById('branchPhone').value;
+
+    if (!nombre || !direccion || !responsable) {
+      alert('Complete los campos obligatorios de la sucursal.');
+      return;
+    }
+
+    let lat = '', lng = '';
+    if (coordsRaw) {
+      const parts = coordsRaw.split(',').map(s => s.trim());
+      if (parts.length === 2) {
+        lat = parts[0];
+        lng = parts[1];
+      }
+    }
+
+    const branch = {
+      nombre,
+      direccion,
+      lat,
+      lng,
+      responsable,
+      cargo,
+      telefono,
+      horarioTexto: document.getElementById('branchSchedule').value,
+      horarioEstructurado: {}, // Placeholder
+      compromisos: {
+        protocolo: false,
+        proteccionCivil: false,
+        areaSeguimiento: false,
+        nom25: false,
+        nom35: false
+      }
+    };
+
+    state.branches.push(branch);
+    renderBranchList();
+    renderBranchCommitments();
+
+    // Clear form
+    document.getElementById('branchForm').reset();
+    document.getElementById('coords').value = '';
+  }
+
+  function removeBranch(index) {
+    state.branches.splice(index, 1);
+    renderBranchList();
+    renderBranchCommitments();
+  }
+
+  function renderBranchList() {
+    const list = document.getElementById('branchList');
+    list.innerHTML = '';
+    state.branches.forEach((b, index) => {
+      const item = document.createElement('div');
+      item.className = 'card';
+      item.style.padding = '10px';
+      item.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div><strong>${b.nombre}</strong><br><small>${b.direccion}</small></div>
+          <button class="btn btn-outline" style="width: auto; padding: 5px 10px;" onclick="removeBranch(${index})">Eliminar</button>
+        </div>
+      `;
+      list.appendChild(item);
+    });
+  }
+
+  function renderBranchCommitments() {
+    const container = document.getElementById('branchCommitmentsContainer');
+    container.innerHTML = '';
+
+    const index = state.currentBranchIndex;
+    const b = state.branches[index];
+
+    if (!b) return;
+
+    const section = document.createElement('div');
+    section.className = 'card mt-4';
+
+    const h2 = document.createElement('h2');
+    h2.textContent = `Compromisos: ${b.nombre}`;
+    section.appendChild(h2);
+
+    const pInfo = document.createElement('p');
+    pInfo.textContent = `Sucursal ${index + 1} de ${state.branches.length}`;
+    pInfo.className = 'badge badge-info';
+    section.appendChild(pInfo);
+
+    const checklist = [
+      { id: 'c1', key: 'protocolo', label: '1. Cuenta con protocolo interno de acoso/violencia laboral' },
+      { id: 'c2', key: 'proteccionCivil', label: '2. Cuenta con dictamen de protección civil vigente' },
+      { id: 'c3', key: 'areaSeguimiento', label: '3. Persona/Área encargada de dar seguimiento' },
+      { id: 'c4', key: 'nom25', label: '4. Alineado a NOM-025-STPS (Trabajo nocturno)' },
+      { id: 'c5', key: 'nom35', label: '5. Alineado a NOM-035-STPS (Riesgo psicosocial)' }
+    ];
+
+    checklist.forEach(item => {
+      const group = document.createElement('div');
+      group.className = 'checkbox-group';
+
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.id = `${item.id}-${index}`;
+      input.checked = b.compromisos[item.key];
+      input.onchange = (e) => updateBranchComp(index, item.key, e.target.checked);
+
+      const label = document.createElement('label');
+      label.htmlFor = input.id;
+      label.textContent = item.label;
+
+      group.appendChild(input);
+      group.appendChild(label);
+      section.appendChild(group);
+    });
+
+    container.appendChild(section);
+
+    // Navigation buttons within Step 3
+    const navDiv = document.createElement('div');
+    navDiv.style.display = 'flex';
+    navDiv.style.justifyContent = 'space-between';
+    navDiv.className = 'mt-4';
+
+    const btnBack = document.createElement('button');
+    btnBack.className = 'btn btn-outline';
+    btnBack.innerHTML = '<i class="fa fa-chevron-left"></i> Anterior';
+    btnBack.onclick = () => {
+      if (state.currentBranchIndex > 0) {
+        state.currentBranchIndex--;
+        renderBranchCommitments();
+      } else {
+        prevStep();
+      }
+    };
+
+    const btnNext = document.createElement('button');
+    btnNext.className = 'btn btn-primary';
+    btnNext.innerHTML = 'Siguiente <i class="fa fa-chevron-right"></i>';
+    btnNext.onclick = () => {
+      if (validateBranchCommitments(index)) {
+        if (state.currentBranchIndex < state.branches.length - 1) {
+          state.currentBranchIndex++;
+          renderBranchCommitments();
+        } else {
+          nextStep();
+        }
+      } else {
+        alert('Debe cumplir con todos los compromisos para esta sucursal.');
+      }
+    };
+
+    navDiv.appendChild(btnBack);
+    navDiv.appendChild(btnNext);
+    container.appendChild(navDiv);
+  }
+
+  function validateBranchCommitments(index) {
+    const b = state.branches[index].compromisos;
+    return b.protocolo && b.proteccionCivil && b.areaSeguimiento && b.nom25 && b.nom35;
+  }
+
+  function updateBranchComp(index, key, value) {
+    state.branches[index].compromisos[key] = value;
+  }
+
+  function updateGeneralComp(key, value) {
+    state.generalCommitments[key] = value;
+  }
+
+  // --- SUMMARY & SUBMISSION ---
+
+  function renderSummary() {
+    const fiscalContainer = document.getElementById('summary-fiscal');
+    fiscalContainer.innerHTML = '';
+
+    const fields = [
+      { label: 'RFC', value: state.fiscalData.rfc },
+      { label: 'Razón Social', value: state.fiscalData.razonSocial },
+      { label: 'Representante', value: state.fiscalData.representante },
+      { label: 'Email', value: state.fiscalData.email },
+      { label: 'Teléfono', value: state.fiscalData.telefono }
+    ];
+
+    fields.forEach(f => {
+      const p = document.createElement('p');
+      const strong = document.createElement('strong');
+      strong.textContent = f.label + ': ';
+      p.appendChild(strong);
+      p.appendChild(document.createTextNode(f.value));
+      fiscalContainer.appendChild(p);
+    });
+
+    const branchesContainer = document.getElementById('summary-branches');
+    branchesContainer.innerHTML = '';
+    const pTotal = document.createElement('p');
+    const strongTotal = document.createElement('strong');
+    strongTotal.textContent = 'Total de sucursales: ';
+    pTotal.appendChild(strongTotal);
+    pTotal.appendChild(document.createTextNode(state.branches.length));
+    branchesContainer.appendChild(pTotal);
+
+    const ul = document.createElement('ul');
+    state.branches.forEach(b => {
+      const li = document.createElement('li');
+      li.textContent = `${b.nombre} - ${b.direccion}`;
+      ul.appendChild(li);
+    });
+    branchesContainer.appendChild(ul);
+  }
+
+  function submitRegistration() {
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerText = 'Procesando...';
+
+    google.script.run
+      .withSuccessHandler(onSuccess)
+      .withFailureHandler(onFailure)
+      .processRegistration(state);
+  }
+
+  function onSuccess(result) {
+    if (result.success) {
+      document.getElementById(`step-5`).classList.add('hidden');
+      document.getElementById('confirmation').classList.remove('hidden');
+      document.getElementById('finalFolio').innerText = result.folio;
+
+      const qrData = JSON.stringify({
+        folio: result.folio,
+        razonSocial: state.fiscalData.razonSocial,
+        fecha: new Date().toLocaleDateString(),
+        estatus: "En revisión"
+      });
+
+      // Generate QR using Google Charts API
+      const qrUrl = `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(qrData)}&choe=UTF-8`;
+      document.getElementById('qrCode').src = qrUrl;
+    } else {
+      alert('Error: ' + result.message);
+      document.getElementById('submitBtn').disabled = false;
+      document.getElementById('submitBtn').innerText = 'Confirmar Registro';
+    }
+  }
+
+  function onFailure(error) {
+    alert('Error del servidor: ' + error.message);
+    document.getElementById('submitBtn').disabled = false;
+    document.getElementById('submitBtn').innerText = 'Confirmar Registro';
+  }
+
+  // --- GEOLOCATION & EXTERNAL MAPS ---
+  function updateInputsFromMap(lat, lng) {
+    document.getElementById('coords').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  }
+
+  function openExternalMap() {
+    // Open Google Maps to allow user to find coordinates
+    window.open('https://www.google.com/maps', '_blank');
+  }
+
+  function getLocation() {
+    const btn = event.currentTarget;
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Obteniendo...';
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(position => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        updateInputsFromMap(lat, lng);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }, error => {
+        alert('No se pudo obtener la ubicación actual. Verifique sus permisos de GPS.');
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }, {
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 0
+      });
+    } else {
+      alert('Geolocalización no soportada en este navegador.');
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }
+  }
+
+</script>
