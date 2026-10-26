@@ -56,7 +56,7 @@
         <hr class="my-4">
         <div class="text-center">
           <span class="text-muted small">¿Ya tienes cuenta?</span><br>
-          <a href="?page=login" class="fw-bold text-decoration-none">
+          <a href="<?= scriptUrl ?>?page=login" target="_top" class="fw-bold text-decoration-none">
             <i class="fas fa-sign-in-alt me-1"></i> Iniciar Sesión
           </a>
         </div>
@@ -90,7 +90,10 @@
       if (res.success) {
         setClientToken(res.token);
         showToast("success", "Registro Exitoso", res.message);
-        setTimeout(() => { window.location.href = "?page=portal"; }, 1000);
+        setTimeout(() => {
+          var baseUrl = window.SCRIPT_URL || "";
+          window.top.location.href = baseUrl + "?page=portal";
+        }, 1000);
       }
     });
   }

@@ -157,7 +157,8 @@
   function cargarDashboardCliente() {
     var token = getClientToken();
     if (!token) {
-      window.location.href = "?page=login";
+      var baseUrl = window.SCRIPT_URL || "";
+      window.top.location.href = baseUrl + "?page=login";
       return;
     }
 
@@ -168,7 +169,8 @@
       renderDashboardCliente(data);
     }).catch(err => {
       setClientToken("");
-      window.location.href = "?page=login";
+      var baseUrl = window.SCRIPT_URL || "";
+      window.top.location.href = baseUrl + "?page=login";
     });
   }
 

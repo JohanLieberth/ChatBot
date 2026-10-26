@@ -49,7 +49,7 @@
             <hr class="my-4">
             <div class="text-center">
               <span class="text-muted small">¿Aún no tienes cuenta?</span><br>
-              <a href="?page=portal_registro" class="fw-bold text-decoration-none">
+              <a href="<?= scriptUrl ?>?page=portal_registro" target="_top" class="fw-bold text-decoration-none">
                 <i class="fas fa-user-plus me-1"></i> Regístrate aquí
               </a>
             </div>
@@ -75,6 +75,11 @@
 </div>
 
 <script>
+  function navigateTo(pageName) {
+    var baseUrl = window.SCRIPT_URL || "";
+    window.top.location.href = baseUrl + "?page=" + pageName;
+  }
+
   function execLoginCliente(e) {
     e.preventDefault();
     var phone = document.getElementById("clientPhone").value.trim();
@@ -84,7 +89,7 @@
       if (res.success) {
         setClientToken(res.token);
         showToast("success", "Bienvenido", "Sesión iniciada correctamente.");
-        setTimeout(() => { window.location.href = "?page=portal"; }, 800);
+        setTimeout(() => { navigateTo("portal"); }, 800);
       }
     });
   }
@@ -93,9 +98,9 @@
     runGas("getCurrentAdminUser").then(user => {
       showToast("success", "Acceso Concedido", `Bienvenido ${user.Nombre} (${user.Rol})`);
       if (user.Rol === "Tecnico") {
-        setTimeout(() => { window.location.href = "?page=tecnico"; }, 800);
+        setTimeout(() => { navigateTo("tecnico"); }, 800);
       } else {
-        setTimeout(() => { window.location.href = "?page=admin"; }, 800);
+        setTimeout(() => { navigateTo("admin"); }, 800);
       }
     }).catch(err => {
       showToast("danger", "Acceso Denegado", "Su correo no está registrado o activo en la tabla de Admins.");

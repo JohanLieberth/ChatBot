@@ -15,9 +15,23 @@ function doGet(e) {
     return renderPrintView(page, e.parameter);
   }
 
+  // Get current script execution Web App URL
+  var scriptUrl = "";
+  try {
+    scriptUrl = ScriptApp.getService().getUrl();
+  } catch (err) {
+    scriptUrl = "";
+  }
+
+  var validPages = ["home", "admin", "admin_usuarios", "tecnico", "portal", "portal_registro", "login"];
+  if (validPages.indexOf(page) === -1) {
+    page = "home";
+  }
+
   var template = HtmlService.createTemplateFromFile("index");
   template.page = page;
   template.params = JSON.stringify(e.parameter || {});
+  template.scriptUrl = scriptUrl;
 
   return template.evaluate()
     .setTitle("BitFix v3 - Taller de Reparaciones")

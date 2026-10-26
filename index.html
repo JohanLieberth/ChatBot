@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+  <base target="_top">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BitFix v3 - Taller de Reparaciones</title>
@@ -25,7 +26,7 @@
   <!-- Navbar Header -->
   <nav class="navbar navbar-expand-lg navbar-dark navbar-bitfix sticky-top">
     <div class="container-fluid">
-      <a class="navbar-brand fw-bold" href="?page=home">
+      <a class="navbar-brand fw-bold" href="<?= scriptUrl ?>?page=home" target="_top">
         <i class="fas fa-wrench me-2 text-warning"></i>BitFix <span class="badge bg-warning text-dark fs-6">v3</span>
       </a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
@@ -35,29 +36,29 @@
       <div class="collapse navbar-collapse" id="navbarMain">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
           <li class="nav-item">
-            <a class="nav-link <?= page === 'home' ? 'active' : '' ?>" href="?page=home">
+            <a class="nav-link <?= page === 'home' ? 'active' : '' ?>" href="<?= scriptUrl ?>?page=home" target="_top">
               <i class="fas fa-home me-1"></i> Inicio
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link <?= page === 'portal' || page === 'portal_registro' ? 'active' : '' ?>" href="?page=portal">
+            <a class="nav-link <?= page === 'portal' || page === 'portal_registro' ? 'active' : '' ?>" href="<?= scriptUrl ?>?page=portal" target="_top">
               <i class="fas fa-user-circle me-1"></i> Portal Cliente
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link <?= page === 'tecnico' ? 'active' : '' ?>" href="?page=tecnico">
+            <a class="nav-link <?= page === 'tecnico' ? 'active' : '' ?>" href="<?= scriptUrl ?>?page=tecnico" target="_top">
               <i class="fas fa-tools me-1"></i> Panel Técnico
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link <?= page === 'admin' || page === 'admin_usuarios' ? 'active' : '' ?>" href="?page=admin">
+            <a class="nav-link <?= page === 'admin' || page === 'admin_usuarios' ? 'active' : '' ?>" href="<?= scriptUrl ?>?page=admin" target="_top">
               <i class="fas fa-user-shield me-1"></i> Administración
             </a>
           </li>
         </ul>
 
         <div class="d-flex align-items-center gap-2" id="navUserBadge">
-          <a href="?page=login" class="btn btn-outline-light btn-sm">
+          <a href="<?= scriptUrl ?>?page=login" class="btn btn-outline-light btn-sm" target="_top">
             <i class="fas fa-sign-in-alt me-1"></i> Acceso Taller / Login
           </a>
         </div>
@@ -88,6 +89,9 @@
 
   <!-- Bootstrap 5 JS Bundle -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    window.SCRIPT_URL = "<?= scriptUrl ?>";
+  </script>
   <?!= include('scripts'); ?>
 </body>
 </html>
