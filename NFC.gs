@@ -90,7 +90,7 @@ function getInfoClienteNFC(telefono) {
 
   var saldoPuntos = getSaldoPuntosCliente(telefono);
   var movsPuntos = getSheetObjects("MovimientosPuntos").filter(function(m) {
-    return String(m.Telefono) === telefono;
+    return String(m.TelefonoCliente || m.Telefono) === telefono;
   }).map(function(m) {
     return {
       MovimientoID: m.MovimientoID,

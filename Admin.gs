@@ -30,10 +30,12 @@ function getAdminOrdenes(filters) {
         .filter(function(a) { return String(a.ServicioID) === String(srv.ServicioID); })
         .map(function(a) { return a.TecnicoID; });
 
+      var noSerieVal = eq["No.Serie"] || eq.NoSerie || "";
+
       return {
         DetalleID: det.DetalleID,
         MarcaModelo: (eq.Marca || "") + " " + (eq.Modelo || ""),
-        NoSerie: eq.NoSerie || "",
+        NoSerie: noSerieVal,
         Technicians: techs,
         CostoFinal: parseNumber(srv.CostoFinal)
       };
@@ -134,6 +136,7 @@ function getDetalleOrdenCompleto(ordenId) {
       .map(function(a) { return a.TecnicoID; });
 
     var srvHist = historial.filter(function(h) { return String(h.ServicioID) === String(srv.ServicioID); });
+    var noSerieVal = eq["No.Serie"] || eq.NoSerie || "N/A";
 
     return {
       DetalleID: det.DetalleID,
@@ -141,7 +144,7 @@ function getDetalleOrdenCompleto(ordenId) {
       Tipo: eq.Tipo,
       Marca: eq.Marca,
       Modelo: eq.Modelo,
-      NoSerie: eq.NoSerie || "N/A",
+      NoSerie: noSerieVal,
       Estatus: det.Estatus,
       ServicioID: srv.ServicioID,
       Diagnostico: srv.Diagnostico,

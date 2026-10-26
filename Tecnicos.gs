@@ -35,6 +35,7 @@ function getMisAsignacionesTecnico() {
       var eq = equipos.filter(function(e) { return String(e.EquipoID) === String(det.EquipoID); })[0] || {};
 
       var isMine = (String(det.TecnicoAsignadoID) === myTechId) || (myServiceIds.indexOf(String(srv.ServicioID)) !== -1);
+      var noSerieVal = eq["No.Serie"] || eq.NoSerie || "N/A";
 
       if (isMine) {
         result.push({
@@ -44,7 +45,7 @@ function getMisAsignacionesTecnico() {
           ClienteNombre: cliente.Nombre || "Cliente",
           ClienteTelefono: cliente.Telefono || "",
           Equipo: (eq.Marca || "") + " " + (eq.Modelo || ""),
-          NoSerie: eq.NoSerie || "N/A",
+          NoSerie: noSerieVal,
           FallaReportada: srv.FallaReportada || "",
           Diagnostico: srv.Diagnostico || "",
           Solucion: srv.Solucion || "",

@@ -131,13 +131,14 @@ function getDashboardCliente(token) {
   var misEquipos = detalles.map(function(det) {
     var eq = equipos.filter(function(e) { return String(e.EquipoID) === String(det.EquipoID); })[0] || {};
     var srv = servicios.filter(function(s) { return String(s.DetalleID) === String(det.DetalleID); })[0] || {};
+    var noSerieVal = eq["No.Serie"] || eq.NoSerie || "N/A";
 
     return {
       OrdenID: det.OrdenID,
       DetalleID: det.DetalleID,
       ServicioID: srv.ServicioID || "N/A",
       Equipo: (eq.Marca || "") + " " + (eq.Modelo || ""),
-      NoSerie: eq.NoSerie || "N/A",
+      NoSerie: noSerieVal,
       Estatus: det.Estatus,
       Diagnostico: srv.Diagnostico || "Pendiente",
       Solucion: srv.Solucion || "Pendiente",
@@ -151,7 +152,9 @@ function getDashboardCliente(token) {
   var saldoRow = saldos.filter(function(s) { return String(s.Telefono) === telefono; })[0];
   var saldoActual = saldoRow ? parseNumber(saldoRow.Saldo) : 0;
 
-  var movs = getSheetObjects("MovimientosPuntos").filter(function(m) { return String(m.Telefono) === telefono; });
+  var movs = getSheetObjects("MovimientosPuntos").filter(function(m) {
+    return String(m.TelefonoCliente || m.Telefono) === telefono;
+  });
 
   var acumulado = 0;
   var historialPuntos = movs.map(function(m) {

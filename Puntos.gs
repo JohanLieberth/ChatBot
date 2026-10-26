@@ -26,7 +26,8 @@ function otorgarPuntosPorServicio(servicioId) {
     // Check if points already granted for this servicioId
     var movs = getSheetObjects("MovimientosPuntos");
     var yaOtorgado = movs.some(function(m) {
-      return String(m.Concepto).indexOf(servicioId) !== -1 && String(m.Telefono) === String(telefono);
+      var mTel = String(m.TelefonoCliente || m.Telefono);
+      return String(m.Concepto).indexOf(servicioId) !== -1 && mTel === String(telefono);
     });
 
     if (yaOtorgado) return;
@@ -42,7 +43,7 @@ function otorgarPuntosPorServicio(servicioId) {
 
     movSheet.appendRow([
       movId,
-      telefono,
+      telefono, // TelefonoCliente
       nowStr,
       puntosNum,
       "Puntos por entrega de servicio " + servicioId
@@ -79,7 +80,7 @@ function registrarMovimientoPuntos(telefono, puntos, concepto) {
 
     movSheet.appendRow([
       movId,
-      telefono,
+      telefono, // TelefonoCliente
       nowStr,
       puntosNum,
       concepto
@@ -110,7 +111,9 @@ function getSaldoPuntosCliente(telefono) {
  */
 function recalcularSaldoPuntos(telefono) {
   telefono = String(telefono || "").replace(/\D/g, "");
-  var movs = getSheetObjects("MovimientosPuntos").filter(function(m) { return String(m.Telefono) === telefono; });
+  var movs = getSheetObjects("MovimientosPuntos").filter(function(m) {
+    return String(m.TelefonoCliente || m.Telefono) === telefono;
+  });
   var totalSaldo = movs.reduce(function(sum, m) { return sum + parseNumber(m.Puntos); }, 0);
 
   var ss = getDbSpreadsheet();

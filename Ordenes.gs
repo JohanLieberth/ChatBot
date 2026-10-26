@@ -73,11 +73,11 @@ function crearOrdenServicio(payload) {
       var equipoId = getNextId("Equipos", "EQ");
       equiposSheet.appendRow([
         equipoId,
-        telefono,
+        telefono, // TelefonoCliente
         item.Tipo || "Consola",
         item.Marca || "",
         item.Modelo || "",
-        item.NoSerie || ""
+        item.NoSerie || item["No.Serie"] || ""
       ]);
 
       var detalleId = getNextId("DetalleOrden", "DET");
@@ -241,12 +241,14 @@ function consultarServicioRapido(servicioId) {
   var targetOrden = det ? ordenes.filter(function(o) { return String(o.OrdenID) === String(det.OrdenID); })[0] : null;
   var cliente = targetOrden ? clientes.filter(function(c) { return String(c.Telefono) === String(targetOrden.Telefono); })[0] : null;
 
+  var noSerieVal = eq ? (eq["No.Serie"] || eq.NoSerie || "N/A") : "N/A";
+
   return {
     ServicioID: srv.ServicioID,
     OrdenID: det ? det.OrdenID : "N/A",
     ClienteNombre: cliente ? cliente.Nombre : "Cliente",
     Equipo: eq ? ((eq.Marca || "") + " " + (eq.Modelo || "")) : "N/A",
-    NoSerie: eq ? eq.NoSerie : "N/A",
+    NoSerie: noSerieVal,
     Diagnostico: srv.Diagnostico || "Pendiente",
     Solucion: srv.Solucion || "Pendiente",
     Estatus: det ? det.Estatus : "En proceso",

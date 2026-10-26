@@ -1,11 +1,12 @@
 /**
- * setup.gs - Schema initialization, configuration seeding, and Apps Script UI menu.
+ * setup.gs - Schema initialization, schema cleanup/migrations, and Apps Script UI menu.
  */
 
 function onOpen() {
   var ui = SpreadsheetApp.getUi();
   ui.createMenu("BitFix")
     .addItem("Inicializar sistema", "setupSchema")
+    .addItem("Limpiar esquema", "cleanupSchema")
     .addItem("Abrir Web App", "abrirWebApp")
     .addToUi();
 }
@@ -24,10 +25,10 @@ function abrirWebApp() {
 
 /**
  * Idempotent schema initialization function.
- * Adds missing columns to existing sheets, creates new required sheets, and seeds default configuration & points tables.
+ * Ensures sheets, headers, config, admins, and runs cleanupSchema().
  */
 function setupSchema() {
-  withLock(function() {
+  return withLock(function() {
     var ss = getDbSpreadsheet();
 
     // Helper to ensure sheet exists
@@ -63,55 +64,52 @@ function setupSchema() {
       });
     }
 
-    // 1. Check and update existing sheets with new required columns
-    // Equipos: Equipos.NoSerie (col F)
-    ensureSheet("Equipos", ["EquipoID", "Telefono", "Tipo", "Marca", "Modelo", "NoSerie"]);
-
-    // OrdenServicio: OrdenServicio.FechaHoraRecepcion (col E), OrdenServicio.CostoEstimado (col F), OrdenServicio.TotalFinal (col G), OrdenServicio.Eliminada, FechaEliminacion, AdminID_Elimino
+    // 1. Ensure sheets with updated target schema
+    ensureSheet("Equipos", ["EquipoID", "TelefonoCliente", "Tipo", "Marca", "Modelo", "No.Serie"]);
     ensureSheet("OrdenServicio", [
       "OrdenID", "Telefono", "FechaRecepcion", "EstatusGeneral",
       "FechaHoraRecepcion", "CostoEstimado", "TotalFinal",
       "Eliminada", "FechaEliminacion", "AdminID_Elimino"
     ]);
-
-    // Servicios: Servicios.CostoDiagnostico (col F), Servicios.CostoFinal (col G), Servicios.FallaReportada (col H), Servicios.ListoParaRecoleccion (col I)
     ensureSheet("Servicios", [
       "ServicioID", "DetalleID", "Diagnostico", "Solucion", "GarantiaDias",
       "CostoDiagnostico", "CostoFinal", "FallaReportada", "ListoParaRecoleccion"
     ]);
-
-    // DetalleOrden: DetalleOrden.TecnicoAsignadoID (col G)
     ensureSheet("DetalleOrden", [
       "DetalleID", "OrdenID", "EquipoID", "Estatus", "FechaLiberacion", "Entregado", "TecnicoAsignadoID"
     ]);
-
-    // UsuariosPortal: UsuariosPortal.PasswordHash (col E), UsuariosPortal.FechaRegistro (col F)
     ensureSheet("UsuariosPortal", [
       "UsuarioID", "Telefono", "Nombre", "Activo", "PasswordHash", "FechaRegistro"
     ]);
-
-    // Admins: ensure Email column exists
     ensureSheet("Admins", ["AdminID", "Nombre", "Rol", "Telefono", "Activo", "Email"]);
-
-    // Ensure other base sheets exist if not created yet
     ensureSheet("Clientes", ["Telefono", "Nombre", "Correo", "TipoCliente"]);
     ensureSheet("Asignaciones", ["AsignacionID", "ServicioID", "TecnicoID", "FechaAsignacion", "Estatus", "HorasInvertidas"]);
     ensureSheet("ActividadesTecnico", ["ActividadID", "TecnicoID", "ServicioID", "Fecha", "Accion", "Minutos"]);
     ensureSheet("HistorialServicio", ["HistorialID", "ServicioID", "FechaHora", "EstatusAnterior", "EstatusNuevo", "UsuarioID", "Notas"]);
     ensureSheet("Pagos", ["PagoID", "OrdenID", "Fecha", "Importe", "Concepto"]);
     ensureSheet("NFC", ["NFC_ID", "UID", "TelefonoCliente"]);
-    ensureSheet("MovimientosPuntos", ["MovimientoID", "Telefono", "Fecha", "Puntos", "Concepto"]);
+    ensureSheet("MovimientosPuntos", ["MovimientoID", "TelefonoCliente", "Fecha", "Puntos", "Concepto"]);
     ensureSheet("SaldoPuntos", ["Telefono", "Saldo"]);
-    ensureSheet("Talleres", ["Telefono", "NombreComercial", "RFC", "Direccion"]);
-
-    // 2. Create new required sheets
+    ensureSheet("Talleres", ["Telefono", "NombreComercial"]);
     ensureSheet("NotificacionesLog", [
       "NotifID", "FechaHora", "Telefono", "OrdenID", "Tipo", "Destinatario", "Asunto", "Estado", "MensajeError"
     ]);
-
     ensureSheet("EtiquetasImpresas", [
       "EtiquetaID", "OrdenID", "DetalleID", "Tipo", "FechaHora", "AdminID"
     ]);
+
+    // 2. Ensure sakurazukamori21@gmail.com is present in Admins
+    var adminSheet = ss.getSheetByName("Admins");
+    var adminsData = getSheetObjects("Admins");
+    var targetEmail = "sakurazukamori21@gmail.com";
+    var existsAdmin = adminsData.filter(function(a) {
+      return String(a.Email).toLowerCase() === targetEmail.toLowerCase();
+    })[0];
+
+    if (!existsAdmin) {
+      var nextAdminId = getNextId("Admins", "ADM");
+      adminSheet.appendRow([nextAdminId, "Admin Sakurazukamori", "Administrador", "", "Si", targetEmail]);
+    }
 
     // 3. Seed Configuracion sheet
     var configSheet = ensureSheet("Configuracion", ["Parametro", "Valor"]);
@@ -162,7 +160,119 @@ function setupSchema() {
         puntosSheet.appendRow([accion, defaultPuntos[accion]]);
       }
     });
+
+    // Run cleanup migrations
+    cleanupSchemaInternal(ss);
+
+    return { success: true, message: "Esquema e inicialización completada con éxito." };
+  });
+}
+
+/**
+ * Cleanup / Migration function to fix duplicate sheets and columns.
+ */
+function cleanupSchema() {
+  return withLock(function() {
+    var ss = getDbSpreadsheet();
+    cleanupSchemaInternal(ss);
+    return { success: true, message: "Limpieza de esquema completada." };
+  });
+}
+
+/**
+ * Internal idempotently executed cleanup migration.
+ */
+function cleanupSchemaInternal(ss) {
+  // Task 2: Remove duplicate 'Cliente' sheet if exists (migrating unique rows to 'Clientes')
+  var clienteSheet = ss.getSheetByName("Cliente");
+  var clientesSheet = ss.getSheetByName("Clientes");
+  if (clienteSheet && clientesSheet) {
+    var clienteObjs = getSheetObjects("Cliente");
+    var clientesObjs = getSheetObjects("Clientes");
+    var existingTels = clientesObjs.map(function(c) { return String(c.Telefono); });
+
+    clienteObjs.forEach(function(row) {
+      var tel = String(row.Telefono || row["Teléfono"] || "").trim();
+      if (tel && existingTels.indexOf(tel) === -1) {
+        clientesSheet.appendRow([
+          tel,
+          row.Nombre || "",
+          row.Correo || "",
+          row.TipoCliente || "Cliente"
+        ]);
+        existingTels.push(tel);
+      }
+    });
+    ss.deleteSheet(clienteSheet);
+  }
+
+  // Task 3: MovimientosPuntos - Migrate 'Teléfono'/'Telefono' to 'TelefonoCliente', remove 'Teléfono'/'Telefono' column
+  var movSheet = ss.getSheetByName("MovimientosPuntos");
+  if (movSheet) {
+    migrateAndRemoveColumn(movSheet, ["Teléfono", "Telefono"], "TelefonoCliente");
+  }
+
+  // Task 4: Talleres - Remove 'RFC' and 'Dirección'/'Direccion' columns
+  var talleresSheet = ss.getSheetByName("Talleres");
+  if (talleresSheet) {
+    removeColumnsByName(talleresSheet, ["RFC", "Dirección", "Direccion"]);
+  }
+
+  // Task 5: Equipos - Migrate 'Teléfono'/'Telefono' -> 'TelefonoCliente' and 'NoSerie' -> 'No.Serie', remove 'Teléfono'/'Telefono' and 'NoSerie'
+  var equiposSheet = ss.getSheetByName("Equipos");
+  if (equiposSheet) {
+    migrateAndRemoveColumn(equiposSheet, ["Teléfono", "Telefono"], "TelefonoCliente");
+    migrateAndRemoveColumn(equiposSheet, ["NoSerie"], "No.Serie");
+  }
+}
+
+/**
+ * Helper to migrate values from source columns to a target column, then remove source columns.
+ */
+function migrateAndRemoveColumn(sheet, sourceColNames, targetColName) {
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 1) return;
+
+  var headers = data[0].map(function(h) { return String(h).trim(); });
+  var targetIdx = headers.indexOf(targetColName);
+
+  // If target column doesn't exist, append it
+  if (targetIdx === -1) {
+    sheet.getRange(1, headers.length + 1).setValue(targetColName);
+    targetIdx = headers.length;
+    headers.push(targetColName);
+  }
+
+  sourceColNames.forEach(function(sourceColName) {
+    var sourceIdx = headers.indexOf(sourceColName);
+    if (sourceIdx !== -1 && sourceIdx !== targetIdx) {
+      // Copy values for all data rows
+      for (var r = 1; r < data.length; r++) {
+        var sourceVal = data[r][sourceIdx];
+        var targetVal = sheet.getRange(r + 1, targetIdx + 1).getValue();
+        if ((targetVal === "" || targetVal === null || targetVal === undefined) && sourceVal !== "" && sourceVal !== null) {
+          sheet.getRange(r + 1, targetIdx + 1).setValue(sourceVal);
+        }
+      }
+    }
   });
 
-  return { success: true, message: "Esquema e inicialización completada con éxito." };
+  // Delete source columns from right to left
+  removeColumnsByName(sheet, sourceColNames);
+}
+
+/**
+ * Helper to delete specified columns by name from a sheet.
+ */
+function removeColumnsByName(sheet, colNamesToRemove) {
+  var lastCol = sheet.getLastColumn();
+  if (lastCol < 1) return;
+
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h).trim(); });
+
+  for (var c = headers.length - 1; c >= 0; c--) {
+    if (colNamesToRemove.indexOf(headers[c]) !== -1) {
+      sheet.deleteColumn(c + 1);
+    }
+  }
 }

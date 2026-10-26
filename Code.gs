@@ -116,12 +116,13 @@ function getPrintData(ordenId, detalleId, servicioId) {
       .filter(function(a) { return String(a.ServicioID) === String(srv.ServicioID); })
       .map(function(a) { return a.TecnicoID; });
     var techStr = Array.from(new Set(techs)).join(", ") || det.TecnicoAsignadoID || "Sin asignar";
+    var noSerieVal = eq["No.Serie"] || eq.NoSerie || "N/A";
 
     return {
       DetalleID: det.DetalleID,
       ServicioID: srv.ServicioID || "",
       Equipo: (eq.Marca || "") + " " + (eq.Modelo || ""),
-      NoSerie: eq.NoSerie || "N/A",
+      NoSerie: noSerieVal,
       FallaReportada: srv.FallaReportada || "N/A",
       Diagnostico: srv.Diagnostico || "Pendiente",
       Solucion: srv.Solucion || "Pendiente",
