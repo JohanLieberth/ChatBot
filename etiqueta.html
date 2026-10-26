@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Etiqueta Dispositivo - BitFix</title>
+  <style>
+    @media print {
+      @page {
+        size: 50mm 30mm;
+        margin: 1mm;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #ffffff;
+      font-family: Arial, sans-serif;
+      font-size: 8px;
+      line-height: 1.1;
+      color: #000;
+    }
+
+    .label-box {
+      width: 48mm;
+      height: 28mm;
+      margin: 0 auto;
+      padding: 1mm;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #000;
+      padding-bottom: 1px;
+    }
+
+    .srv-id {
+      font-weight: bold;
+      font-size: 10px;
+    }
+
+    .qr-img {
+      width: 22px;
+      height: 22px;
+    }
+
+    .content-body {
+      margin-top: 2px;
+    }
+
+    .fw-bold { font-weight: bold; }
+    .text-truncate {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .page-break {
+      page-break-after: always;
+    }
+
+    .btn-print {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      background: #198754;
+      color: #fff;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="no-print" style="max-width: 250px; margin: 10px auto; text-align: center;">
+    <button onclick="window.print()" class="btn-print">Imprimir Etiqueta (50x30mm)</button>
+  </div>
+
+  <? if (data.error) { ?>
+    <div class="label-box text-center">
+      <p class="fw-bold"><?= data.error ?></p>
+    </div>
+  <? } else { ?>
+
+    <? data.Items.forEach(function(item, idx) { ?>
+      <div class="label-box <?= (idx < data.Items.length - 1) ? 'page-break' : '' ?>">
+        <div class="header-row">
+          <div>
+            <div class="srv-id"><?= item.ServicioID ?></div>
+            <div style="font-size: 7px;"><?= data.FechaHoraRecepcion ?></div>
+          </div>
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=<?= item.ServicioID ?>" class="qr-img" alt="QR">
+        </div>
+
+        <div class="content-body">
+          <div class="text-truncate"><strong>Cliente:</strong> <?= data.ClienteNombre ?></div>
+          <div class="text-truncate"><strong>Equipo:</strong> <?= item.Equipo ?></div>
+          <div class="text-truncate"><strong>S/N:</strong> <?= item.NoSerie ?></div>
+          <div class="text-truncate"><strong>Falla:</strong> <?= item.FallaReportada ?></div>
+        </div>
+
+        <div style="border-top: 1px dashed #000; padding-top: 1px; font-size: 7px; display: flex; justify-content: space-between;">
+          <span>BitFix Taller</span>
+          <span class="fw-bold">Ord: <?= data.OrdenID ?></span>
+        </div>
+      </div>
+    <? }); ?>
+
+  <? } ?>
+
+</body>
+</html>

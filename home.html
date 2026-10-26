@@ -1,0 +1,125 @@
+<!-- Home Landing Page -->
+<div class="row g-4">
+  <!-- Hero Section with Background Video -->
+  <div class="col-12">
+    <div class="hero-video-container shadow">
+      <video autoplay muted loop playsinline>
+        <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
+        Tu navegador no soporta reproducción de video.
+      </video>
+      <div class="hero-overlay p-4">
+        <h1 class="display-4 fw-bold mb-3"><i class="fas fa-wrench me-2 text-warning"></i>BitFix Taller</h1>
+        <p class="lead mb-4 fs-4">Especialistas en reparación de consolas, laptops y equipos electrónicos.</p>
+        <div class="d-flex justify-content-center gap-3 flex-wrap">
+          <a href="?page=portal" class="btn btn-primary btn-lg shadow">
+            <i class="fas fa-user-circle me-2"></i>Portal Cliente
+          </a>
+          <a href="?page=login" class="btn btn-outline-light btn-lg shadow">
+            <i class="fas fa-lock me-2"></i>Acceso Taller
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Status Search Section -->
+  <div class="col-md-6 offset-md-3">
+    <div class="card card-custom shadow-sm p-4 text-center">
+      <h3 class="h4 fw-bold text-primary mb-3">
+        <i class="fas fa-search me-2"></i>Consulta Rápida de Estado
+      </h3>
+      <p class="text-muted small">Ingresa tu Folio de Servicio (ej. <strong>SRV001</strong>) para conocer el estatus de tu reparación sin iniciar sesión.</p>
+
+      <form onsubmit="buscarServicioRapido(event)">
+        <div class="input-group input-group-lg mb-3">
+          <input type="text" id="inputServicioId" class="form-control text-uppercase" placeholder="Ej. SRV001" required>
+          <button class="btn btn-primary" type="submit">
+            <i class="fas fa-search me-1"></i> Consultar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Points Promo Section -->
+  <div class="col-12">
+    <div class="card card-custom p-4 bg-light">
+      <div class="row align-items-center">
+        <div class="col-md-8">
+          <h4 class="fw-bold text-dark mb-2">
+            <i class="fas fa-coins text-warning me-2"></i>¡Gana Puntos BitFix por cada servicio!
+          </h4>
+          <p class="text-muted mb-0">Acumula puntos en cada reparación o al referir amigos y canjéalos por descuentos o servicios futuros en nuestro taller.</p>
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+          <div class="d-inline-block bg-white p-3 rounded shadow-sm">
+            <div class="badge bg-success me-2">Servicio Mayor = +10 pts</div>
+            <div class="badge bg-purple">Referido = +25 pts</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Quick Consultation Result -->
+<div class="modal fade" id="modalConsultaRapida" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title fw-bold">
+          <i class="fas fa-info-circle me-2"></i>Estado del Servicio <span id="resServicioId"></span>
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive">
+          <table class="table table-bordered table-sm">
+            <tbody>
+              <tr><th class="bg-light w-40">Orden:</th><td id="resOrdenId"></td></tr>
+              <tr><th class="bg-light">Estatus Actual:</th><td id="resEstatus"></td></tr>
+              <tr><th class="bg-light">Cliente:</th><td id="resCliente"></td></tr>
+              <tr><th class="bg-light">Equipo:</th><td id="resEquipo"></td></tr>
+              <tr><th class="bg-light">No. Serie:</th><td id="resNoSerie"></td></tr>
+              <tr><th class="bg-light">Diagnóstico:</th><td id="resDiagnostico"></td></tr>
+              <tr><th class="bg-light">Solución:</th><td id="resSolucion"></td></tr>
+              <tr><th class="bg-light">Técnico Asignado:</th><td id="resTecnico"></td></tr>
+              <tr><th class="bg-light">Costo Final:</th><td id="resCostoFinal" class="fw-bold text-success"></td></tr>
+              <tr><th class="bg-light">Fecha Liberación:</th><td id="resFechaLiberacion"></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function buscarServicioRapido(e) {
+    e.preventDefault();
+    var srvId = document.getElementById("inputServicioId").value.trim();
+    if (!srvId) return;
+
+    runGas("consultarServicioRapido", srvId).then(data => {
+      document.getElementById("resServicioId").innerText = data.ServicioID;
+      document.getElementById("resOrdenId").innerText = data.OrdenID;
+      document.getElementById("resEstatus").innerHTML = getStatusBadgeHtml(data.Estatus);
+      document.getElementById("resCliente").innerText = data.ClienteNombre;
+      document.getElementById("resEquipo").innerText = data.Equipo;
+      document.getElementById("resNoSerie").innerText = data.NoSerie;
+      document.getElementById("resDiagnostico").innerText = data.Diagnostico;
+      document.getElementById("resSolucion").innerText = data.Solucion;
+      document.getElementById("resTecnico").innerText = data.TecnicoAsignado;
+      document.getElementById("resCostoFinal").innerText = data.CostoFinal;
+      document.getElementById("resFechaLiberacion").innerText = data.FechaLiberacion;
+
+      var modal = new bootstrap.Modal(document.getElementById("modalConsultaRapida"));
+      modal.show();
+    }).catch(err => {
+      // Error handled by runGas
+    });
+  }
+</script>

@@ -1,0 +1,619 @@
+<!-- Admin Panel View -->
+<div class="row mb-3 align-items-center">
+  <div class="col-md-6">
+    <h3 class="fw-bold text-dark mb-0">
+      <i class="fas fa-tasks me-2 text-primary"></i>Panel de Administración de Órdenes
+    </h3>
+  </div>
+  <div class="col-md-6 text-md-end mt-2 mt-md-0">
+    <a href="?page=admin_usuarios" class="btn btn-outline-purple me-2">
+      <i class="fas fa-users-cog me-1"></i> Usuarios / NFC / Puntos
+    </a>
+    <button class="btn btn-success fw-bold" onclick="abrirModalNuevaOrden()">
+      <i class="fas fa-plus-circle me-1"></i> Nueva Orden
+    </button>
+  </div>
+</div>
+
+<!-- Filters Bar -->
+<div class="card card-custom p-3 mb-4 shadow-sm">
+  <div class="row g-2 align-items-center">
+    <div class="col-md-3">
+      <div class="input-group">
+        <span class="input-group-text"><i class="fas fa-search"></i></span>
+        <input type="text" id="filterSearch" class="form-control" placeholder="Buscar ID, Cliente, Tel, Serie..." oninput="filtrarAdminOrdenes()">
+      </div>
+    </div>
+    <div class="col-md-2">
+      <select id="filterEstatus" class="form-select" onchange="filtrarAdminOrdenes()">
+        <option value="">-- Estatus --</option>
+        <option value="Abierta">Abierta</option>
+        <option value="En Proceso">En Proceso</option>
+        <option value="Entregado Parcial">Entregado Parcial</option>
+        <option value="Cerrada">Cerrada</option>
+        <option value="Cancelada">Cancelada</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <select id="filterTipoCliente" class="form-select" onchange="filtrarAdminOrdenes()">
+        <option value="">-- Tipo Cliente --</option>
+        <option value="Cliente">Cliente Normal</option>
+        <option value="Taller">Taller</option>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <select id="filterTecnico" class="form-select" onchange="filtrarAdminOrdenes()">
+        <option value="">-- Técnico Asignado --</option>
+      </select>
+    </div>
+    <div class="col-md-2 text-end">
+      <button class="btn btn-outline-secondary w-100" onclick="cargarAdminOrdenes()">
+        <i class="fas fa-sync-alt me-1"></i> Recargar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Orders Table -->
+<div class="card card-custom shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0" id="tablaAdminOrdenes">
+      <thead class="table-dark">
+        <tr>
+          <th>OrdenID</th>
+          <th>Fecha/Hora</th>
+          <th>Nombre</th>
+          <th>Equipos</th>
+          <th>No. Serie</th>
+          <th>TecnicoID</th>
+          <th>Estatus</th>
+          <th>Total</th>
+          <th class="text-end">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyAdminOrdenes">
+        <tr><td colspan="9" class="text-center py-4 text-muted">Cargando órdenes...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal Nueva Orden -->
+<div class="modal fade" id="modalNuevaOrden" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title fw-bold"><i class="fas fa-plus-circle me-2"></i>Registrar Nueva Orden</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formNuevaOrden">
+          <div class="row g-3 mb-3">
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Teléfono (10 dígitos) *</label>
+              <input type="tel" id="newTel" class="form-control" required maxlength="10" pattern="\d{10}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Nombre Cliente *</label>
+              <input type="text" id="newNombre" class="form-control" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Correo Electrónico</label>
+              <input type="email" id="newCorreo" class="form-control">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Tipo de Cliente</label>
+              <select id="newTipoCliente" class="form-select">
+                <option value="Cliente">Cliente Normal</option>
+                <option value="Taller">Taller</option>
+              </select>
+            </div>
+          </div>
+
+          <hr>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="fw-bold text-primary mb-0"><i class="fas fa-laptop me-1"></i> Dispositivos / Equipos</h6>
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="agregarFilaEquipoNewOrder()">
+              <i class="fas fa-plus me-1"></i> Añadir otro equipo
+            </button>
+          </div>
+
+          <div id="containerEquiposNewOrder">
+            <!-- Dynamic rows inserted here -->
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-success fw-bold" onclick="guardarNuevaOrden()">
+          <i class="fas fa-save me-1"></i> Registrar Orden
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Detalle/Editar Orden -->
+<div class="modal fade" id="modalDetalleOrden" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header bg-dark text-white">
+        <h5 class="modal-title fw-bold">
+          <i class="fas fa-file-alt me-2 text-warning"></i>Detalle de Orden <span id="detOrdenIdTitle"></span>
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="bodyDetalleOrden">
+        <!-- Dynamic Order Details Content -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Reenviar Correo -->
+<div class="modal fade" id="modalReenviarCorreo" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title fw-bold"><i class="fas fa-envelope me-2"></i>Reenviar Correo</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="emailOrdenId">
+        <input type="hidden" id="emailTelefono">
+        <div class="mb-3">
+          <label class="form-label fw-bold">Destinatario</label>
+          <input type="email" id="emailDestinatario" class="form-control" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-bold">Asunto</label>
+          <input type="text" id="emailAsunto" class="form-control" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-bold">Mensaje / Cuerpo</label>
+          <textarea id="emailCuerpo" class="form-control" rows="5" required></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-info text-white fw-bold" onclick="ejecutarReenvioCorreo()">
+          <i class="fas fa-paper-plane me-1"></i> Enviar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  var rawAdminOrdenes = [];
+  var listaTecnicosActivos = [];
+
+  document.addEventListener("DOMContentLoaded", () => {
+    cargarTecnicos();
+    cargarAdminOrdenes();
+  });
+
+  function cargarTecnicos() {
+    runGas("getTecnicosActivos").then(list => {
+      listaTecnicosActivos = list;
+      var selectFilter = document.getElementById("filterTecnico");
+      selectFilter.innerHTML = '<option value="">-- Técnico Asignado --</option>';
+      list.forEach(t => {
+        selectFilter.innerHTML += `<option value="${t.AdminID}">${t.Nombre} (${t.AdminID})</option>`;
+      });
+    });
+  }
+
+  function cargarAdminOrdenes() {
+    runGas("getAdminOrdenes", {}).then(data => {
+      rawAdminOrdenes = data;
+      filtrarAdminOrdenes();
+    });
+  }
+
+  function filtrarAdminOrdenes() {
+    var search = document.getElementById("filterSearch").value.toLowerCase();
+    var estatus = document.getElementById("filterEstatus").value;
+    var tipoCliente = document.getElementById("filterTipoCliente").value;
+    var tecnico = document.getElementById("filterTecnico").value;
+
+    var filtered = rawAdminOrdenes.filter(row => {
+      var matchSearch = !search || row.OrdenID.toLowerCase().includes(search) ||
+                        row.ClienteNombre.toLowerCase().includes(search) ||
+                        row.ClienteTelefono.includes(search) ||
+                        row.SeriesConcat.toLowerCase().includes(search) ||
+                        row.EquiposConcat.toLowerCase().includes(search);
+      var matchEstatus = !estatus || row.EstatusGeneral === estatus;
+      var matchTipo = !tipoCliente || row.ClienteTipo === tipoCliente;
+      var matchTech = !tecnico || row.TecnicoIDConcat.includes(tecnico);
+
+      return matchSearch && matchEstatus && matchTipo && matchTech;
+    });
+
+    renderTablaAdminOrdenes(filtered);
+  }
+
+  function renderTablaAdminOrdenes(list) {
+    var tbody = document.getElementById("tbodyAdminOrdenes");
+    if (!list || list.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">No se encontraron órdenes.</td></tr>';
+      return;
+    }
+
+    var html = "";
+    list.forEach(row => {
+      var isTaller = row.ClienteTipo === "Taller";
+      var bgRowClass = isTaller ? "table-taller-row" : "";
+      var badgeCliente = isTaller
+        ? `<span class="badge bg-purple ms-1">TALLER</span>`
+        : `<span class="badge bg-primary ms-1">CLIENTE</span>`;
+
+      html += `
+        <tr class="${bgRowClass}">
+          <td class="fw-bold">${row.OrdenID}</td>
+          <td class="small">${row.FechaHora}</td>
+          <td>${row.ClienteNombre} ${badgeCliente}</td>
+          <td class="small">${row.EquiposConcat}</td>
+          <td class="small font-monospace">${row.SeriesConcat}</td>
+          <td class="small">${row.TecnicoIDConcat}</td>
+          <td>${getStatusBadgeHtml(row.EstatusGeneral)}</td>
+          <td class="fw-bold text-success">${row.TotalFormatted}</td>
+          <td class="text-end">
+            <div class="btn-group btn-group-sm">
+              <button class="btn btn-outline-primary" onclick="verDetalleOrden('${row.OrdenID}')" title="Ver / Editar">
+                <i class="fas fa-eye"></i>
+              </button>
+              <button class="btn btn-outline-dark" onclick="imprimirComprobante('${row.OrdenID}')" title="Imprimir Comprobante">
+                <i class="fas fa-print"></i>
+              </button>
+              <button class="btn btn-outline-danger" onclick="confirmarEliminarOrden('${row.OrdenID}')" title="Eliminar">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    });
+    tbody.innerHTML = html;
+  }
+
+  function abrirModalNuevaOrden() {
+    document.getElementById("formNuevaOrden").reset();
+    document.getElementById("containerEquiposNewOrder").innerHTML = "";
+    agregarFilaEquipoNewOrder();
+    var modal = new bootstrap.Modal(document.getElementById("modalNuevaOrden"));
+    modal.show();
+  }
+
+  function agregarFilaEquipoNewOrder() {
+    var container = document.getElementById("containerEquiposNewOrder");
+    var idx = container.children.length;
+
+    var techOptions = '<option value="ADM001">ADM001 (Default)</option>';
+    listaTecnicosActivos.forEach(t => {
+      techOptions += `<option value="${t.AdminID}">${t.Nombre} (${t.AdminID})</option>`;
+    });
+
+    var rowHtml = `
+      <div class="card p-3 bg-light mb-2 equipo-row-new">
+        <div class="row g-2">
+          <div class="col-md-3">
+            <label class="form-label small fw-bold">Tipo</label>
+            <input type="text" class="form-control form-control-sm eq-tipo" placeholder="Consola / Laptop" value="Consola" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-bold">Marca</label>
+            <input type="text" class="form-control form-control-sm eq-marca" placeholder="Sony / Dell" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-bold">Modelo</label>
+            <input type="text" class="form-control form-control-sm eq-modelo" placeholder="PS5 / Inspiron" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-bold">No. Serie</label>
+            <input type="text" class="form-control form-control-sm eq-serie" placeholder="S/N 123456" required>
+          </div>
+          <div class="col-md-5">
+            <label class="form-label small fw-bold">Falla Reportada</label>
+            <input type="text" class="form-control form-control-sm eq-falla" placeholder="No enciende / Pantalla rota">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-bold">Costo Diag. ($)</label>
+            <input type="number" class="form-control form-control-sm eq-costodiag" value="150" min="0">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-bold">Técnico Principal</label>
+            <select class="form-select form-select-sm eq-tech">${techOptions}</select>
+          </div>
+          <div class="col-md-1 d-flex align-items-end">
+            ${idx > 0 ? `<button type="button" class="btn btn-sm btn-outline-danger w-100" onclick="this.closest('.equipo-row-new').remove()"><i class="fas fa-times"></i></button>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+    container.insertAdjacentHTML("beforeend", rowHtml);
+  }
+
+  function guardarNuevaOrden() {
+    var tel = document.getElementById("newTel").value.trim();
+    var nombre = document.getElementById("newNombre").value.trim();
+    var correo = document.getElementById("newCorreo").value.trim();
+    var tipo = document.getElementById("newTipoCliente").value;
+
+    if (!tel || tel.length !== 10 || !nombre) {
+      showToast("warning", "Campos Requeridos", "Ingrese un número de teléfono de 10 dígitos y el nombre del cliente.");
+      return;
+    }
+
+    var eqRows = document.querySelectorAll(".equipo-row-new");
+    var items = [];
+    eqRows.forEach(row => {
+      items.push({
+        Tipo: row.querySelector(".eq-tipo").value.trim(),
+        Marca: row.querySelector(".eq-marca").value.trim(),
+        Modelo: row.querySelector(".eq-modelo").value.trim(),
+        NoSerie: row.querySelector(".eq-serie").value.trim(),
+        FallaReportada: row.querySelector(".eq-falla").value.trim(),
+        CostoDiagnostico: row.querySelector(".eq-costodiag").value,
+        TecnicoAsignadoID: row.querySelector(".eq-tech").value
+      });
+    });
+
+    if (items.length === 0) {
+      showToast("warning", "Atención", "Debe incluir al menos un equipo.");
+      return;
+    }
+
+    var payload = {
+      Telefono: tel,
+      Nombre: nombre,
+      Correo: correo,
+      TipoCliente: tipo,
+      items: items
+    };
+
+    runGas("crearOrdenServicio", payload).then(res => {
+      showToast("success", "Éxito", "Orden " + res.ordenId + " creada correctamente.");
+      bootstrap.Modal.getInstance(document.getElementById("modalNuevaOrden")).hide();
+      cargarAdminOrdenes();
+    });
+  }
+
+  function verDetalleOrden(ordenId) {
+    runGas("getDetalleOrdenCompleto", ordenId).then(data => {
+      document.getElementById("detOrdenIdTitle").innerText = data.OrdenID;
+
+      var badgeCliente = data.Cliente.TipoCliente === "Taller"
+        ? `<span class="badge bg-purple">TALLER</span>`
+        : `<span class="badge bg-primary">CLIENTE</span>`;
+
+      var html = `
+        <div class="row g-3 mb-4">
+          <div class="col-md-4">
+            <div class="card p-3 bg-light h-100">
+              <h6 class="fw-bold text-dark"><i class="fas fa-user me-1"></i> Cliente</h6>
+              <div class="fs-5 fw-bold">${data.Cliente.Nombre} ${badgeCliente}</div>
+              <div class="small text-muted"><i class="fas fa-phone me-1"></i>${data.Cliente.Telefono}</div>
+              <div class="small text-muted"><i class="fas fa-envelope me-1"></i>${data.Cliente.Correo || 'Sin correo'}</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card p-3 bg-light h-100">
+              <h6 class="fw-bold text-dark"><i class="fas fa-info-circle me-1"></i> Estado de la Orden</h6>
+              <div>Fecha Recepción: <strong>${data.FechaHoraRecepcion}</strong></div>
+              <div>Estatus General: ${getStatusBadgeHtml(data.EstatusGeneral)}</div>
+              <div class="mt-2">
+                <button class="btn btn-sm btn-outline-info" onclick="abrirModalReenviarCorreo('${data.OrdenID}', '${data.Cliente.Telefono}', '${data.Cliente.Correo}')">
+                  <i class="fas fa-paper-plane me-1"></i> Reenviar Notificación
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card p-3 bg-light h-100">
+              <h6 class="fw-bold text-dark"><i class="fas fa-calculator me-1"></i> Resumen Financiero</h6>
+              <div>Total Final: <strong class="fs-5 text-success">${formatMoney(data.TotalFinal)}</strong></div>
+              <div>Pagado: <strong class="text-primary">${formatMoney(data.TotalPagado)}</strong></div>
+              <div>Saldo Pendiente: <strong class="text-danger">${formatMoney(data.SaldoPendiente)}</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <h6 class="fw-bold text-primary mb-2"><i class="fas fa-laptop me-1"></i> Equipos / Servicios en esta Orden</h6>
+        <div class="table-responsive mb-4">
+          <table class="table table-bordered align-middle small">
+            <thead class="table-secondary">
+              <tr>
+                <th>ServicioID / Equipo</th>
+                <th>No. Serie</th>
+                <th>Estatus / Falla</th>
+                <th>Diagnóstico / Solución</th>
+                <th>Costo Diag.</th>
+                <th>Costo Final</th>
+                <th>Técnicos</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      data.Items.forEach(item => {
+        var techBadges = item.TecnicosAsignados.map(t => `<span class="badge bg-secondary me-1">${t}</span>`).join("");
+
+        html += `
+          <tr>
+            <td>
+              <strong class="text-primary">${item.ServicioID}</strong><br>
+              <strong>${item.Marca} ${item.Modelo}</strong> (${item.Tipo})
+            </td>
+            <td class="font-monospace">${item.NoSerie}</td>
+            <td>
+              ${getStatusBadgeHtml(item.Estatus)}<br>
+              <span class="text-muted small">Falla: ${item.FallaReportada}</span>
+            </td>
+            <td>
+              <strong>Diag:</strong> ${item.Diagnostico}<br>
+              <strong>Sol:</strong> ${item.Solucion}
+            </td>
+            <td>
+              <input type="number" class="form-control form-control-sm" id="costoDiag_${item.ServicioID}" value="${item.CostoDiagnostico}" style="width: 80px;">
+            </td>
+            <td>
+              <input type="number" class="form-control form-control-sm" id="costoFinal_${item.ServicioID}" value="${item.CostoFinal}" style="width: 90px;">
+            </td>
+            <td>
+              <div>${techBadges}</div>
+              <button class="btn btn-link btn-sm p-0 text-decoration-none mt-1" onclick="reasignarTecnicoModal('${item.ServicioID}')">+ Añadir Técnico</button>
+            </td>
+            <td>
+              <div class="btn-group-vertical btn-group-sm">
+                <button class="btn btn-primary" onclick="guardarCambiosDetalle('${item.DetalleID}', '${item.ServicioID}')" title="Guardar cambios">
+                  <i class="fas fa-save"></i>
+                </button>
+                <button class="btn btn-outline-dark" onclick="imprimirEtiqueta('${data.OrdenID}', '${item.DetalleID}')" title="Etiqueta 50x30">
+                  <i class="fas fa-tag"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+
+      html += `
+            </tbody>
+          </table>
+        </div>
+
+        <div class="row g-3">
+          <!-- Register Payment Section -->
+          <div class="col-md-6">
+            <div class="card p-3 shadow-sm">
+              <h6 class="fw-bold text-dark"><i class="fas fa-cash-register me-1"></i> Registrar Pago / Abono</h6>
+              <div class="row g-2">
+                <div class="col-6">
+                  <input type="number" id="pagoImporte" class="form-control form-control-sm" placeholder="Monto $" min="1">
+                </div>
+                <div class="col-6">
+                  <input type="text" id="pagoConcepto" class="form-control form-control-sm" placeholder="Concepto (Efectivo/Tarjeta)">
+                </div>
+                <div class="col-12 text-end">
+                  <button class="btn btn-sm btn-success fw-bold" onclick="ejecutarPagoRapido('${data.OrdenID}')">
+                    <i class="fas fa-plus me-1"></i> Registrar Pago
+                  </button>
+                </div>
+              </div>
+
+              <hr class="my-2">
+              <h6 class="small fw-bold mb-1">Historial de Pagos</h6>
+              <ul class="list-group list-group-flush small">
+      `;
+
+      if (data.Pagos.length === 0) {
+        html += `<li class="list-group-item text-muted">Sin pagos registrados.</li>`;
+      } else {
+        data.Pagos.forEach(p => {
+          html += `<li class="list-group-item d-flex justify-content-between"><span>${p.Fecha} - ${p.Concepto}</span><strong class="text-success">${formatMoney(p.Importe)}</strong></li>`;
+        });
+      }
+
+      html += `
+              </ul>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById("bodyDetalleOrden").innerHTML = html;
+      var modal = new bootstrap.Modal(document.getElementById("modalDetalleOrden"));
+      modal.show();
+    });
+  }
+
+  function guardarCambiosDetalle(detalleId, servicioId) {
+    var cDiag = document.getElementById("costoDiag_" + servicioId).value;
+    var cFinal = document.getElementById("costoFinal_" + servicioId).value;
+
+    runGas("actualizarDetalleServicio", {
+      DetalleID: detalleId,
+      ServicioID: servicioId,
+      CostoDiagnostico: cDiag,
+      CostoFinal: cFinal
+    }).then(res => {
+      showToast("success", "Actualizado", res.message);
+      cargarAdminOrdenes();
+    });
+  }
+
+  function reasignarTecnicoModal(servicioId) {
+    var techId = prompt("Ingrese el ID del técnico a asignar (ej. ADM003):");
+    if (techId) {
+      runGas("asignarTecnicoServicio", servicioId, techId).then(res => {
+        showToast("success", "Reasignado", res.message);
+      });
+    }
+  }
+
+  function ejecutarPagoRapido(ordenId) {
+    var importe = document.getElementById("pagoImporte").value;
+    var concepto = document.getElementById("pagoConcepto").value;
+
+    if (!importe || parseFloat(importe) <= 0) {
+      showToast("warning", "Atención", "Ingrese un importe válido.");
+      return;
+    }
+
+    runGas("registrarPago", ordenId, importe, concepto).then(res => {
+      showToast("success", "Pago Registrado", res.message);
+      verDetalleOrden(ordenId);
+      cargarAdminOrdenes();
+    });
+  }
+
+  function abrirModalReenviarCorreo(ordenId, tel, correo) {
+    document.getElementById("emailOrdenId").value = ordenId;
+    document.getElementById("emailTelefono").value = tel;
+    document.getElementById("emailDestinatario").value = correo || "";
+    document.getElementById("emailAsunto").value = `BitFix - Actualización de tu orden ${ordenId}`;
+    document.getElementById("emailCuerpo").value = `Hola,\n\nTe notificamos sobre una actualización en tu orden de servicio ${ordenId}.\n\nPuedes consultar el avance en nuestro portal: https://portal.bitfix.mx`;
+
+    var modal = new bootstrap.Modal(document.getElementById("modalReenviarCorreo"));
+    modal.show();
+  }
+
+  function ejecutarReenvioCorreo() {
+    var ordenId = document.getElementById("emailOrdenId").value;
+    var tel = document.getElementById("emailTelefono").value;
+    var dest = document.getElementById("emailDestinatario").value;
+    var asunto = document.getElementById("emailAsunto").value;
+    var cuerpo = document.getElementById("emailCuerpo").value;
+
+    runGas("reenviarCorreoManual", tel, ordenId, {
+      Destinatario: dest,
+      Asunto: asunto,
+      Cuerpo: cuerpo
+    }).then(res => {
+      showToast("success", "Correo Enviado", res.message);
+      bootstrap.Modal.getInstance(document.getElementById("modalReenviarCorreo")).hide();
+    });
+  }
+
+  function imprimirComprobante(ordenId) {
+    window.open(`?page=comprobante&ordenId=${ordenId}`, '_blank');
+  }
+
+  function imprimirEtiqueta(ordenId, detalleId) {
+    window.open(`?page=etiqueta&ordenId=${ordenId}&detalleId=${detalleId}`, '_blank');
+  }
+
+  function confirmarEliminarOrden(ordenId) {
+    var confirmId = prompt(`Para confirmar la eliminación, escriba el ID exacto de la orden (${ordenId}):`);
+    if (!confirmId) return;
+
+    var hardDelete = confirm("¿Desea eliminar DEFINITIVAMENTE la orden? (Solo si no tiene pagos registrados)");
+
+    runGas("eliminarOrden", ordenId, hardDelete, confirmId).then(res => {
+      showToast("success", "Eliminada", res.message);
+      cargarAdminOrdenes();
+    });
+  }
+</script>

@@ -1,0 +1,104 @@
+<!-- Login View -->
+<div class="row justify-content-center py-5">
+  <div class="col-md-6 col-lg-5">
+    <div class="card card-custom shadow-lg">
+      <div class="card-header bg-dark text-white text-center py-3">
+        <h4 class="fw-bold mb-0"><i class="fas fa-lock me-2 text-warning"></i>Acceso al Sistema</h4>
+      </div>
+      <div class="card-body p-4">
+
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-pills nav-justified mb-4" id="loginTab" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active fw-bold" id="tab-cliente-tab" data-bs-toggle="tab" data-bs-target="#tab-cliente" type="button" role="tab">
+              <i class="fas fa-user me-1"></i> Cliente
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link fw-bold" id="tab-taller-tab" data-bs-toggle="tab" data-bs-target="#tab-taller" type="button" role="tab">
+              <i class="fas fa-tools me-1"></i> Taller / Admin
+            </button>
+          </li>
+        </ul>
+
+        <div class="tab-content" id="loginTabContent">
+          <!-- Client Login Tab -->
+          <div class="tab-pane fade show active" id="tab-cliente" role="tabpanel">
+            <form onsubmit="execLoginCliente(event)">
+              <div class="mb-3">
+                <label class="form-label fw-bold">Teléfono (10 dígitos)</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                  <input type="tel" id="clientPhone" class="form-control" placeholder="9991000001" required maxlength="10" pattern="\d{10}">
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-bold">Contraseña</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-key"></i></span>
+                  <input type="password" id="clientPass" class="form-control" placeholder="••••••••" required>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary w-100 btn-lg shadow-sm">
+                <i class="fas fa-sign-in-alt me-1"></i> Iniciar Sesión Cliente
+              </button>
+            </form>
+
+            <hr class="my-4">
+            <div class="text-center">
+              <span class="text-muted small">¿Aún no tienes cuenta?</span><br>
+              <a href="?page=portal_registro" class="fw-bold text-decoration-none">
+                <i class="fas fa-user-plus me-1"></i> Regístrate aquí
+              </a>
+            </div>
+          </div>
+
+          <!-- Staff/Admin Login Tab -->
+          <div class="tab-pane fade" id="tab-taller" role="tabpanel">
+            <div class="text-center py-3">
+              <i class="fab fa-google fa-3x text-danger mb-3"></i>
+              <h5 class="fw-bold">Autenticación por Google Session</h5>
+              <p class="text-muted small">El acceso para Técnicos, Recepción y Administradores utiliza su cuenta de Google registrada en la tabla de Admins.</p>
+
+              <button onclick="execLoginStaff()" class="btn btn-dark btn-lg w-100 shadow-sm mt-3">
+                <i class="fas fa-user-shield me-2 text-warning"></i> Acceder con mi Cuenta de Google
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function execLoginCliente(e) {
+    e.preventDefault();
+    var phone = document.getElementById("clientPhone").value.trim();
+    var pass = document.getElementById("clientPass").value.trim();
+
+    runGas("loginClientePortal", phone, pass).then(res => {
+      if (res.success) {
+        setClientToken(res.token);
+        showToast("success", "Bienvenido", "Sesión iniciada correctamente.");
+        setTimeout(() => { window.location.href = "?page=portal"; }, 800);
+      }
+    });
+  }
+
+  function execLoginStaff() {
+    runGas("getCurrentAdminUser").then(user => {
+      showToast("success", "Acceso Concedido", `Bienvenido ${user.Nombre} (${user.Rol})`);
+      if (user.Rol === "Tecnico") {
+        setTimeout(() => { window.location.href = "?page=tecnico"; }, 800);
+      } else {
+        setTimeout(() => { window.location.href = "?page=admin"; }, 800);
+      }
+    }).catch(err => {
+      showToast("danger", "Acceso Denegado", "Su correo no está registrado o activo en la tabla de Admins.");
+    });
+  }
+</script>

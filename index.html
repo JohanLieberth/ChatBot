@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BitFix v3 - Taller de Reparaciones</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome 6 -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <?!= include('styles'); ?>
+</head>
+<body>
+
+  <!-- Loading Spinner Overlay -->
+  <div id="loadingSpinnerOverlay" class="d-none">
+    <div class="text-center">
+      <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+        <span class="visually-hidden">Cargando...</span>
+      </div>
+      <div class="mt-2 fw-bold text-dark">Procesando solicitud...</div>
+    </div>
+  </div>
+
+  <!-- Navbar Header -->
+  <nav class="navbar navbar-expand-lg navbar-dark navbar-bitfix sticky-top">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold" href="?page=home">
+        <i class="fas fa-wrench me-2 text-warning"></i>BitFix <span class="badge bg-warning text-dark fs-6">v3</span>
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarMain">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item">
+            <a class="nav-link <?= page === 'home' ? 'active' : '' ?>" href="?page=home">
+              <i class="fas fa-home me-1"></i> Inicio
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link <?= page === 'portal' || page === 'portal_registro' ? 'active' : '' ?>" href="?page=portal">
+              <i class="fas fa-user-circle me-1"></i> Portal Cliente
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link <?= page === 'tecnico' ? 'active' : '' ?>" href="?page=tecnico">
+              <i class="fas fa-tools me-1"></i> Panel Técnico
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link <?= page === 'admin' || page === 'admin_usuarios' ? 'active' : '' ?>" href="?page=admin">
+              <i class="fas fa-user-shield me-1"></i> Administración
+            </a>
+          </li>
+        </ul>
+
+        <div class="d-flex align-items-center gap-2" id="navUserBadge">
+          <a href="?page=login" class="btn btn-outline-light btn-sm">
+            <i class="fas fa-sign-in-alt me-1"></i> Acceso Taller / Login
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content Container -->
+  <main class="container-fluid py-4" id="mainContainer">
+    <? if (page === 'home') { ?>
+      <?!= include('home'); ?>
+    <? } else if (page === 'portal') { ?>
+      <?!= include('portal'); ?>
+    <? } else if (page === 'portal_registro') { ?>
+      <?!= include('portal_registro'); ?>
+    <? } else if (page === 'tecnico') { ?>
+      <?!= include('tecnico'); ?>
+    <? } else if (page === 'admin') { ?>
+      <?!= include('admin'); ?>
+    <? } else if (page === 'admin_usuarios') { ?>
+      <?!= include('admin_usuarios'); ?>
+    <? } else if (page === 'login') { ?>
+      <?!= include('login'); ?>
+    <? } else { ?>
+      <?!= include('home'); ?>
+    <? } ?>
+  </main>
+
+  <!-- Bootstrap 5 JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <?!= include('scripts'); ?>
+</body>
+</html>

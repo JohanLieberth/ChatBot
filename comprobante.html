@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Comprobante de Servicio - BitFix</title>
+  <style>
+    @media print {
+      @page {
+        size: 58mm auto;
+        margin: 2mm;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #f8f9fa;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 11px;
+      line-height: 1.2;
+      color: #000;
+    }
+
+    .ticket-box {
+      width: 58mm;
+      margin: 0 auto;
+      background: #fff;
+      padding: 2mm;
+    }
+
+    .text-center { text-align: center; }
+    .text-end { text-align: right; }
+    .fw-bold { font-weight: bold; }
+    .divider-double { border-top: 1px double #000; margin: 4px 0; }
+    .divider-dashed { border-top: 1px dashed #000; margin: 4px 0; }
+
+    .page-break {
+      page-break-after: always;
+    }
+
+    .btn-print {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      background: #0d6efd;
+      color: #fff;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="no-print" style="max-width: 300px; margin: 10px auto; text-align: center;">
+    <button onclick="window.print()" class="btn-print">Imprimir Comprobante (58mm)</button>
+  </div>
+
+  <? if (data.error) { ?>
+    <div class="ticket-box text-center">
+      <p class="fw-bold"><?= data.error ?></p>
+    </div>
+  <? } else { ?>
+
+    <? data.Items.forEach(function(item, idx) { ?>
+      <div class="ticket-box <?= (idx < data.Items.length - 1) ? 'page-break' : '' ?>">
+        <div class="divider-double"></div>
+        <div class="text-center fw-bold">BitFix Reparaciones</div>
+        <div class="text-center">Taller de Equipos Electrónicos</div>
+        <div class="divider-double"></div>
+
+        <div>Orden: <span class="fw-bold"><?= data.OrdenID ?></span></div>
+        <div>Fecha: <?= data.FechaHoraRecepcion ?></div>
+        <div>Folio Servicio: <span class="fw-bold"><?= item.ServicioID ?></span></div>
+        <div>Cliente: <?= data.ClienteNombre ?></div>
+        <div>Tel: <?= data.ClienteTelefono ?></div>
+        <div class="divider-dashed"></div>
+
+        <div>Equipo: <?= item.Equipo ?></div>
+        <div>No. Serie: <?= item.NoSerie ?></div>
+        <div>Falla: <?= item.FallaReportada ?></div>
+        <div>Diagnóstico: <?= item.Diagnostico ?></div>
+        <div>Solución: <?= item.Solucion ?></div>
+        <div>Garantía: <?= item.GarantiaDias ?> días</div>
+        <div class="divider-dashed"></div>
+
+        <div>Costo diag: $<?= item.CostoDiagnostico.toFixed(2) ?></div>
+        <div>Costo final: $<?= item.CostoFinal.toFixed(2) ?></div>
+        <div>Estatus: <?= item.Estatus ?></div>
+        <div>Técnico: <?= item.TecnicoID ?></div>
+        <div class="divider-dashed"></div>
+
+        <div>Total orden: $<?= data.TotalFinal.toFixed(2) ?></div>
+        <div>Pagado:     $<?= data.TotalPagado.toFixed(2) ?></div>
+        <div>Saldo:      $<?= data.Saldo.toFixed(2) ?></div>
+        <div class="divider-dashed"></div>
+
+        <div class="text-center">¡Gracias por su preferencia!</div>
+        <div class="text-center">Portal: portal.bitfix.mx</div>
+        <div class="divider-double"></div>
+      </div>
+    <? }); ?>
+
+  <? } ?>
+
+</body>
+</html>

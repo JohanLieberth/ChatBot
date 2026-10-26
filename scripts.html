@@ -1,0 +1,142 @@
+<script>
+  /**
+   * Promisified wrapper for google.script.run
+   */
+  function runGas(functionName, ...args) {
+    showSpinner();
+    return new Promise((resolve, reject) => {
+      if (typeof google === 'undefined' || !google.script || !google.script.run) {
+        hideSpinner();
+        showToast("error", "Error de entorno", "google.script.run no está disponible.");
+        reject(new Error("google.script.run no disponible."));
+        return;
+      }
+
+      google.script.run
+        .withSuccessHandler((response) => {
+          hideSpinner();
+          resolve(response);
+        })
+        .withFailureHandler((error) => {
+          hideSpinner();
+          var msg = (error && error.message) ? error.message : String(error);
+          showToast("danger", "Error", msg);
+          reject(error);
+        })[functionName](...args);
+    });
+  }
+
+  function showSpinner() {
+    var el = document.getElementById("loadingSpinnerOverlay");
+    if (el) el.classList.remove("d-none");
+  }
+
+  function hideSpinner() {
+    var el = document.getElementById("loadingSpinnerOverlay");
+    if (el) el.classList.add("d-none");
+  }
+
+  /**
+   * Bootstrap Toast notification display
+   */
+  function showToast(type, title, message) {
+    var container = document.getElementById("toastContainer");
+    if (!container) {
+      container = document.createElement("div");
+      container.id = "toastContainer";
+      container.className = "toast-container position-fixed bottom-0 end-0 p-3";
+      container.style.zIndex = "1100";
+      document.body.appendChild(container);
+    }
+
+    var bgClass = "bg-primary text-white";
+    var iconClass = "fa-info-circle";
+    if (type === "success") { bgClass = "bg-success text-white"; iconClass = "fa-check-circle"; }
+    else if (type === "danger" || type === "error") { bgClass = "bg-danger text-white"; iconClass = "fa-exclamation-triangle"; }
+    else if (type === "warning") { bgClass = "bg-warning text-dark"; iconClass = "fa-exclamation-circle"; }
+
+    var toastEl = document.createElement("div");
+    toastEl.className = `toast align-items-center ${bgClass} border-0`;
+    toastEl.setAttribute("role", "alert");
+    toastEl.setAttribute("aria-live", "assertive");
+    toastEl.setAttribute("aria-atomic", "true");
+
+    toastEl.innerHTML = `
+      <div class="d-flex">
+        <div class="toast-body">
+          <i class="fas ${iconClass} me-2"></i><strong>${title}:</strong> ${message}
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+    `;
+
+    container.appendChild(toastEl);
+    var bsToast = new bootstrap.Toast(toastEl, { delay: 5000 });
+    bsToast.show();
+    toastEl.addEventListener('hidden.bs.toast', () => { toastEl.remove(); });
+  }
+
+  /**
+   * Client Session Token LocalStorage helpers
+   */
+  function getClientToken() {
+    return localStorage.getItem("bitfix_client_token") || "";
+  }
+
+  function setClientToken(token) {
+    if (token) {
+      localStorage.setItem("bitfix_client_token", token);
+    } else {
+      localStorage.removeItem("bitfix_client_token");
+    }
+  }
+
+  function logoutClientPortal() {
+    var token = getClientToken();
+    runGas("logoutClient", token).finally(() => {
+      setClientToken("");
+      window.location.href = "?page=home";
+    });
+  }
+
+  /**
+   * Formats numeric currency
+   */
+  function formatMoney(amount) {
+    var n = parseFloat(amount);
+    if (isNaN(n)) return "$0.00";
+    return "$" + n.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,");
+  }
+
+  /**
+   * Status Badge renderer
+   */
+  function getStatusBadgeHtml(status) {
+    var s = String(status || "").trim();
+    switch (s) {
+      case "Diagnostico":
+        return `<span class="badge badge-status-diagnostico"><i class="fas fa-stethoscope me-1"></i>Diagnóstico</span>`;
+      case "En Reparacion":
+        return `<span class="badge badge-status-reparacion"><i class="fas fa-tools me-1"></i>En Reparación</span>`;
+      case "Esperando Refaccion":
+        return `<span class="badge badge-status-refaccion"><i class="fas fa-box-open me-1"></i>Esperando Refacción</span>`;
+      case "Listo para Recoleccion":
+        return `<span class="badge badge-status-listo"><i class="fas fa-check-double me-1"></i>Listo p/ Recolección</span>`;
+      case "Entregado":
+        return `<span class="badge badge-status-entregado"><i class="fas fa-hand-holding-heart me-1"></i>Entregado</span>`;
+      case "Entregado Parcial":
+        return `<span class="badge badge-status-parcial"><i class="fas fa-tasks me-1"></i>Entregado Parcial</span>`;
+      case "Cancelado":
+      case "Cancelada":
+        return `<span class="badge badge-status-cancelado"><i class="fas fa-times-circle me-1"></i>Cancelado</span>`;
+      case "Abierta":
+        return `<span class="badge bg-warning text-dark"><i class="fas fa-folder-open me-1"></i>Abierta</span>`;
+      case "En Proceso":
+        return `<span class="badge bg-info text-dark"><i class="fas fa-spinner me-1"></i>En Proceso</span>`;
+      case "Cerrada":
+        return `<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Cerrada</span>`;
+      default:
+        return `<span class="badge bg-secondary">${s}</span>`;
+    }
+  }
+</script>

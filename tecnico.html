@@ -1,0 +1,243 @@
+<!-- Technician Panel View -->
+<div class="row mb-3 align-items-center">
+  <div class="col-md-6">
+    <h3 class="fw-bold text-dark mb-0">
+      <i class="fas fa-tools me-2 text-warning"></i>Panel de Trabajo Técnico
+    </h3>
+  </div>
+  <div class="col-md-6 text-md-end mt-2 mt-md-0">
+    <button class="btn btn-outline-secondary" onclick="cargarMisAsignaciones()">
+      <i class="fas fa-sync-alt me-1"></i> Actualizar Mis Asignaciones
+    </button>
+  </div>
+</div>
+
+<!-- Tech Assignments Table Card -->
+<div class="card card-custom shadow-sm mb-4">
+  <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+    <h5 class="fw-bold mb-0"><i class="fas fa-list-check me-2"></i>Mis Dispositivos Asignados</h5>
+    <span class="badge bg-warning text-dark fs-6" id="cntMisAsignaciones">0 Asignados</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-secondary">
+        <tr>
+          <th>OrdenID</th>
+          <th>Cliente</th>
+          <th>Equipo / Modelo</th>
+          <th>No. Serie</th>
+          <th>Falla Reportada</th>
+          <th>Mi Estatus</th>
+          <th>Costo Diag.</th>
+          <th class="text-end">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyMisAsignaciones">
+        <tr><td colspan="8" class="text-center py-4 text-muted">Cargando asignaciones...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal Actualizar Estatus -->
+<div class="modal fade" id="modalEstatusTecnico" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title fw-bold"><i class="fas fa-edit me-2"></i>Actualizar Estatus de Reparación</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="techDetalleId">
+        <input type="hidden" id="techServicioId">
+
+        <div class="mb-3">
+          <label class="form-label fw-bold">Nuevo Estatus del Dispositivo</label>
+          <select id="selectEstatusTecnico" class="form-select" onchange="toggleTechDiagFields()">
+            <option value="Diagnostico">Diagnóstico</option>
+            <option value="En Reparacion">En Reparación</option>
+            <option value="Esperando Refaccion">Esperando Refacción</option>
+            <option value="Listo para Recoleccion">Listo para Recolección (Envía Correo Auto)</option>
+          </select>
+        </div>
+
+        <div id="techDiagFieldsContainer">
+          <div class="mb-3">
+            <label class="form-label fw-bold">Falla Reportada / Observada</label>
+            <input type="text" id="techFallaReportada" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-bold">Costo Diagnóstico ($)</label>
+            <input type="number" id="techCostoDiag" class="form-control" min="0">
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-bold">Notas / Diagnóstico Técnico / Solución</label>
+          <textarea id="techNotasEstatus" class="form-control" rows="3" placeholder="Detalla el diagnóstico o piezas necesarias..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-warning fw-bold" onclick="guardarEstatusTecnico()">
+          <i class="fas fa-save me-1"></i> Actualizar Estatus
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Registrar Minutos/Actividad -->
+<div class="modal fade" id="modalMinutosTecnico" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title fw-bold"><i class="fas fa-clock me-2"></i>Registrar Minutos Trabajados</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="actServicioId">
+
+        <div class="mb-3">
+          <label class="form-label fw-bold">Acción / Tarea Realizada</label>
+          <input type="text" id="actAccion" class="form-control" placeholder="Ej. Limpieza interna, Micro-soldadura, Pruebas" required>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-bold">Minutos Invertidos</label>
+          <input type="number" id="actMinutos" class="form-control" value="30" min="1" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-info text-white fw-bold" onclick="guardarActividadTecnico()">
+          <i class="fas fa-check me-1"></i> Registrar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  var misAsignacionesData = [];
+
+  document.addEventListener("DOMContentLoaded", () => {
+    cargarMisAsignaciones();
+  });
+
+  function cargarMisAsignaciones() {
+    runGas("getMisAsignacionesTecnico").then(data => {
+      misAsignacionesData = data;
+      document.getElementById("cntMisAsignaciones").innerText = `${data.length} Asignados`;
+      renderTablaMisAsignaciones(data);
+    });
+  }
+
+  function renderTablaMisAsignaciones(list) {
+    var tbody = document.getElementById("tbodyMisAsignaciones");
+    if (!list || list.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted"><i class="fas fa-check-circle text-success me-1"></i>No tienes dispositivos asignados pendientes.</td></tr>';
+      return;
+    }
+
+    var html = "";
+    list.forEach(item => {
+      html += `
+        <tr>
+          <td class="fw-bold">${item.OrdenID}</td>
+          <td>
+            <strong>${item.ClienteNombre}</strong><br>
+            <span class="small text-muted">${item.ClienteTelefono}</span>
+          </td>
+          <td><strong>${item.Equipo}</strong></td>
+          <td class="font-monospace small">${item.NoSerie}</td>
+          <td class="small">${item.FallaReportada || 'N/A'}</td>
+          <td>${getStatusBadgeHtml(item.Estatus)}</td>
+          <td class="fw-bold">${formatMoney(item.CostoDiagnostico)}</td>
+          <td class="text-end">
+            <div class="btn-group btn-group-sm">
+              <button class="btn btn-warning fw-bold" onclick="abrirModalEstatusTecnico('${item.DetalleID}', '${item.ServicioID}', '${item.Estatus}', '${item.FallaReportada}', '${item.CostoDiagnostico}')" title="Actualizar Estatus">
+                <i class="fas fa-edit me-1"></i> Estatus
+              </button>
+              <button class="btn btn-outline-info" onclick="abrirModalMinutosTecnico('${item.ServicioID}')" title="Registrar Minutos">
+                <i class="fas fa-clock me-1"></i> Minutos
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    });
+    tbody.innerHTML = html;
+  }
+
+  function abrirModalEstatusTecnico(detalleId, servicioId, estatusActual, falla, costoDiag) {
+    document.getElementById("techDetalleId").value = detalleId;
+    document.getElementById("techServicioId").value = servicioId;
+    document.getElementById("selectEstatusTecnico").value = estatusActual;
+    document.getElementById("techFallaReportada").value = falla || "";
+    document.getElementById("techCostoDiag").value = costoDiag || 150;
+    document.getElementById("techNotasEstatus").value = "";
+
+    toggleTechDiagFields();
+    var modal = new bootstrap.Modal(document.getElementById("modalEstatusTecnico"));
+    modal.show();
+  }
+
+  function toggleTechDiagFields() {
+    var st = document.getElementById("selectEstatusTecnico").value;
+    var container = document.getElementById("techDiagFieldsContainer");
+    if (st === "Diagnostico") {
+      container.classList.remove("d-none");
+    } else {
+      container.classList.add("d-none");
+    }
+  }
+
+  function guardarEstatusTecnico() {
+    var detId = document.getElementById("techDetalleId").value;
+    var srvId = document.getElementById("techServicioId").value;
+    var st = document.getElementById("selectEstatusTecnico").value;
+    var falla = document.getElementById("techFallaReportada").value;
+    var costoD = document.getElementById("techCostoDiag").value;
+    var notas = document.getElementById("techNotasEstatus").value;
+
+    runGas("actualizarDetalleServicio", {
+      DetalleID: detId,
+      ServicioID: srvId,
+      Estatus: st,
+      FallaReportada: falla,
+      CostoDiagnostico: costoD,
+      Diagnostico: notas,
+      Notas: notas
+    }).then(res => {
+      showToast("success", "Estatus Actualizado", res.message);
+      bootstrap.Modal.getInstance(document.getElementById("modalEstatusTecnico")).hide();
+      cargarMisAsignaciones();
+    });
+  }
+
+  function abrirModalMinutosTecnico(servicioId) {
+    document.getElementById("actServicioId").value = servicioId;
+    document.getElementById("actAccion").value = "";
+    document.getElementById("actMinutos").value = 30;
+
+    var modal = new bootstrap.Modal(document.getElementById("modalMinutosTecnico"));
+    modal.show();
+  }
+
+  function guardarActividadTecnico() {
+    var srvId = document.getElementById("actServicioId").value;
+    var accion = document.getElementById("actAccion").value.trim();
+    var mins = document.getElementById("actMinutos").value;
+
+    if (!accion || !mins) {
+      showToast("warning", "Atención", "Ingrese la acción y los minutos trabajados.");
+      return;
+    }
+
+    runGas("registrarActividadTecnico", srvId, accion, mins).then(res => {
+      showToast("success", "Minutos Registrados", res.message);
+      bootstrap.Modal.getInstance(document.getElementById("modalMinutosTecnico")).hide();
+    });
+  }
+</script>

@@ -1,0 +1,253 @@
+<!-- Client Portal Dashboard View -->
+<div id="portalLoading" class="text-center py-5">
+  <div class="spinner-border text-primary" role="status">
+    <span class="visually-hidden">Cargando dashboard...</span>
+  </div>
+  <p class="mt-2 text-muted">Cargando la información de tus equipos...</p>
+</div>
+
+<div id="portalContainer" class="d-none">
+  <!-- Top Profile Banner -->
+  <div class="card card-custom p-4 mb-4 shadow-sm bg-white">
+    <div class="row align-items-center">
+      <div class="col-md-8">
+        <h3 class="fw-bold text-dark mb-1">
+          <i class="fas fa-user-circle me-2 text-primary"></i><span id="pName">Cliente</span>
+        </h3>
+        <p class="text-muted mb-0 small">
+          <i class="fas fa-phone me-1"></i><span id="pTel">-</span> |
+          <i class="fas fa-envelope me-1"></i><span id="pCorreo">-</span>
+        </p>
+      </div>
+      <div class="col-md-4 text-md-end mt-3 mt-md-0">
+        <button onclick="logoutClientPortal()" class="btn btn-outline-danger btn-sm">
+          <i class="fas fa-sign-out-alt me-1"></i> Cerrar Sesión
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Cards Row -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card card-custom p-3 shadow-sm border-start border-warning border-4">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <span class="text-muted small fw-bold text-uppercase">Saldo de Puntos BitFix</span>
+            <div class="fs-3 fw-bold text-warning" id="pSaldoPuntos">0</div>
+          </div>
+          <i class="fas fa-coins fa-2x text-warning opacity-50"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card card-custom p-3 shadow-sm border-start border-info border-4">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <span class="text-muted small fw-bold text-uppercase">Tarjeta NFC Vinculada</span>
+            <div class="fs-5 fw-bold font-monospace text-info" id="pNfcUid">Sin vincular</div>
+          </div>
+          <i class="fas fa-wifi fa-2x text-info opacity-50"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card card-custom p-3 shadow-sm border-start border-primary border-4">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <span class="text-muted small fw-bold text-uppercase">Mis Equipos Registrados</span>
+            <div class="fs-3 fw-bold text-primary" id="pTotalEquipos">0</div>
+          </div>
+          <i class="fas fa-laptop fa-2x text-primary opacity-50"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Repair Equipments -->
+  <div class="card card-custom shadow-sm mb-4">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+      <h5 class="fw-bold mb-0"><i class="fas fa-tools me-2 text-warning"></i>Mis Equipos en Reparación</h5>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>OrdenID / ServicioID</th>
+            <th>Equipo</th>
+            <th>No. Serie</th>
+            <th>Estatus</th>
+            <th>Diagnóstico</th>
+            <th>Solución</th>
+            <th>Costo Final</th>
+            <th>Fecha Liberación</th>
+          </tr>
+        </thead>
+        <tbody id="pTbodyEquipos">
+          <tr><td colspan="8" class="text-center py-4 text-muted">Cargando equipos...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Points & Payments Tabs -->
+  <div class="card card-custom shadow-sm p-3">
+    <ul class="nav nav-tabs fw-bold mb-3" id="portalTab" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="tab-puntos-btn" data-bs-toggle="tab" data-bs-target="#tab-puntos" type="button" role="tab">
+          <i class="fas fa-coins me-1 text-warning"></i> Historial de Puntos
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-pagos-btn" data-bs-toggle="tab" data-bs-target="#tab-pagos" type="button" role="tab">
+          <i class="fas fa-receipt me-1 text-success"></i> Historial de Pagos
+        </button>
+      </li>
+    </ul>
+
+    <div class="tab-content" id="portalTabContent">
+      <div class="tab-pane fade show active" id="tab-puntos" role="tabpanel">
+        <div class="table-responsive">
+          <table class="table table-sm table-striped align-middle">
+            <thead>
+              <tr>
+                <th>MovimientoID</th>
+                <th>Fecha</th>
+                <th>Puntos</th>
+                <th>Concepto</th>
+                <th>Saldo Acumulado</th>
+              </tr>
+            </thead>
+            <tbody id="pTbodyPuntos">
+              <tr><td colspan="5" class="text-center text-muted">Sin movimientos de puntos.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="tab-pagos" role="tabpanel">
+        <div class="table-responsive">
+          <table class="table table-sm table-striped align-middle">
+            <thead>
+              <tr>
+                <th>PagoID</th>
+                <th>OrdenID</th>
+                <th>Fecha</th>
+                <th>Concepto</th>
+                <th>Importe</th>
+              </tr>
+            </thead>
+            <tbody id="pTbodyPagos">
+              <tr><td colspan="5" class="text-center text-muted">Sin pagos registrados.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    cargarDashboardCliente();
+  });
+
+  function cargarDashboardCliente() {
+    var token = getClientToken();
+    if (!token) {
+      window.location.href = "?page=login";
+      return;
+    }
+
+    runGas("getDashboardCliente", token).then(data => {
+      document.getElementById("portalLoading").classList.add("d-none");
+      document.getElementById("portalContainer").classList.remove("d-none");
+
+      renderDashboardCliente(data);
+    }).catch(err => {
+      setClientToken("");
+      window.location.href = "?page=login";
+    });
+  }
+
+  function renderDashboardCliente(data) {
+    document.getElementById("pName").innerText = data.Cliente.Nombre;
+    document.getElementById("pTel").innerText = data.Cliente.Telefono;
+    document.getElementById("pCorreo").innerText = data.Cliente.Correo || "Sin correo registrado";
+
+    document.getElementById("pSaldoPuntos").innerText = data.SaldoPuntos;
+    document.getElementById("pNfcUid").innerText = data.NFC_UID;
+    document.getElementById("pTotalEquipos").innerText = data.Equipos.length;
+
+    // Equipos Table
+    var tbodyEq = document.getElementById("pTbodyEquipos");
+    if (!data.Equipos || data.Equipos.length === 0) {
+      tbodyEq.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No tienes equipos registrados actualmente.</td></tr>';
+    } else {
+      var htmlEq = "";
+      data.Equipos.forEach(eq => {
+        htmlEq += `
+          <tr>
+            <td>
+              <strong class="text-primary">${eq.OrdenID}</strong><br>
+              <span class="small font-monospace text-muted">${eq.ServicioID}</span>
+            </td>
+            <td><strong>${eq.Equipo}</strong></td>
+            <td class="font-monospace small">${eq.NoSerie}</td>
+            <td>${getStatusBadgeHtml(eq.Estatus)}</td>
+            <td class="small">${eq.Diagnostico}</td>
+            <td class="small">${eq.Solucion}</td>
+            <td class="fw-bold text-success">${eq.CostoFinal}</td>
+            <td class="small">${eq.FechaLiberacion}</td>
+          </tr>
+        `;
+      });
+      tbodyEq.innerHTML = htmlEq;
+    }
+
+    // Points Table
+    var tbodyPts = document.getElementById("pTbodyPuntos");
+    if (!data.HistorialPuntos || data.HistorialPuntos.length === 0) {
+      tbodyPts.innerHTML = '<tr><td colspan="5" class="text-center py-3 text-muted">Sin historial de puntos.</td></tr>';
+    } else {
+      var htmlPts = "";
+      data.HistorialPuntos.forEach(m => {
+        var pBadge = m.Puntos > 0
+          ? `<span class="badge bg-success">+${m.Puntos}</span>`
+          : `<span class="badge bg-danger">${m.Puntos}</span>`;
+        htmlPts += `
+          <tr>
+            <td class="font-monospace">${m.MovimientoID}</td>
+            <td class="small">${m.Fecha}</td>
+            <td>${pBadge}</td>
+            <td>${m.Concepto}</td>
+            <td class="fw-bold">${m.SaldoAcumulado} pts</td>
+          </tr>
+        `;
+      });
+      tbodyPts.innerHTML = htmlPts;
+    }
+
+    // Payments Table
+    var tbodyPag = document.getElementById("pTbodyPagos");
+    if (!data.Pagos || data.Pagos.length === 0) {
+      tbodyPag.innerHTML = '<tr><td colspan="5" class="text-center py-3 text-muted">Sin pagos registrados.</td></tr>';
+    } else {
+      var htmlPag = "";
+      data.Pagos.forEach(p => {
+        htmlPag += `
+          <tr>
+            <td class="font-monospace">${p.PagoID}</td>
+            <td class="fw-bold">${p.OrdenID}</td>
+            <td class="small">${p.Fecha}</td>
+            <td>${p.Concepto}</td>
+            <td class="fw-bold text-success">${formatMoney(p.Importe)}</td>
+          </tr>
+        `;
+      });
+      tbodyPag.innerHTML = htmlPag;
+    }
+  }
+</script>
