@@ -57,14 +57,30 @@
 
           <!-- Staff/Admin Login Tab -->
           <div class="tab-pane fade" id="tab-taller" role="tabpanel">
-            <div class="text-center py-3">
-              <i class="fab fa-google fa-3x text-danger mb-3"></i>
-              <h5 class="fw-bold">Autenticación por Google Session</h5>
-              <p class="text-muted small">El acceso para Técnicos, Recepción y Administradores utiliza su cuenta de Google registrada en la tabla de Admins.</p>
+            <form onsubmit="execLoginStaff(event)">
+              <div class="mb-3">
+                <label class="form-label fw-bold">Correo Electrónico de Taller</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                  <input type="email" id="staffEmail" class="form-control" placeholder="admin@bitfix.mx" required>
+                </div>
+              </div>
 
-              <button onclick="execLoginStaff()" class="btn btn-dark btn-lg w-100 shadow-sm mt-3">
-                <i class="fas fa-user-shield me-2 text-warning"></i> Acceder con mi Cuenta de Google
+              <div class="mb-3">
+                <label class="form-label fw-bold">Contraseña</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                  <input type="password" id="staffPass" class="form-control" placeholder="••••••••" required>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-dark w-100 btn-lg shadow-sm">
+                <i class="fas fa-user-shield me-2 text-warning"></i> Iniciar Sesión Taller / Admin
               </button>
+            </form>
+
+            <div class="mt-3 text-center">
+              <span class="text-muted extra-small">Contraseña inicial de prueba para admins/técnicos: <strong>123456</strong></span>
             </div>
           </div>
         </div>
@@ -94,16 +110,21 @@
     });
   }
 
-  function execLoginStaff() {
-    runGas("getCurrentAdminUser").then(user => {
-      showToast("success", "Acceso Concedido", `Bienvenido ${user.Nombre} (${user.Rol})`);
-      if (user.Rol === "Tecnico") {
-        setTimeout(() => { navigateTo("tecnico"); }, 800);
-      } else {
-        setTimeout(() => { navigateTo("admin"); }, 800);
+  function execLoginStaff(e) {
+    e.preventDefault();
+    var email = document.getElementById("staffEmail").value.trim();
+    var pass = document.getElementById("staffPass").value.trim();
+
+    runGas("loginAdmin", email, pass).then(res => {
+      if (res.success) {
+        setStaffToken(res.token);
+        showToast("success", "Acceso Concedido", `Bienvenido ${res.user.Nombre} (${res.user.Rol})`);
+        if (res.user.Rol === "Tecnico") {
+          setTimeout(() => { navigateTo("tecnico"); }, 800);
+        } else {
+          setTimeout(() => { navigateTo("admin"); }, 800);
+        }
       }
-    }).catch(err => {
-      showToast("danger", "Acceso Denegado", "Su correo no está registrado o activo en la tabla de Admins.");
     });
   }
 </script>

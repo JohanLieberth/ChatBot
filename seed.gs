@@ -28,6 +28,7 @@ function seedData() {
     }
 
     var counts = {};
+    var passHash123456 = hashPassword("123456");
 
     // Helper to seed sheet rows without duplicating existing keys
     function seedTable(sheetName, keyCol, rows, headerArray) {
@@ -53,12 +54,12 @@ function seedData() {
 
     // 1. Admins
     seedTable("Admins", "AdminID", [
-      ["ADM001", "Admin Principal", "Administrador", "9990000001", "Si", "admin@bitfix.mx"],
-      ["ADM002", "Recepción Taller", "Recepcion", "9990000002", "Si", "recepcion@bitfix.mx"],
-      ["ADM003", "Carlos Técnico Consolas", "Tecnico", "9990000003", "Si", "carlos.tecnico@bitfix.mx"],
-      ["ADM004", "Luis Técnico Laptops", "Tecnico", "9990000004", "Si", "luis.tecnico@bitfix.mx"],
-      ["ADM005", "Admin Sakurazukamori", "Administrador", "9990000005", "Si", "sakurazukamori21@gmail.com"]
-    ], ["AdminID", "Nombre", "Rol", "Telefono", "Activo", "Email"]);
+      ["ADM001", "Admin Principal", "Administrador", "9990000001", "Si", "admin@bitfix.mx", passHash123456],
+      ["ADM002", "Recepción Taller", "Recepcion", "9990000002", "Si", "recepcion@bitfix.mx", passHash123456],
+      ["ADM003", "Carlos Técnico Consolas", "Tecnico", "9990000003", "Si", "carlos.tecnico@bitfix.mx", passHash123456],
+      ["ADM004", "Luis Técnico Laptops", "Tecnico", "9990000004", "Si", "luis.tecnico@bitfix.mx", passHash123456],
+      ["ADM005", "Admin Sakurazukamori", "Administrador", "9990000005", "Si", "sakurazukamori21@gmail.com", passHash123456]
+    ], ["AdminID", "Nombre", "Rol", "Telefono", "Activo", "Email", "PasswordHash"]);
 
     // 2. Clientes
     seedTable("Clientes", "Telefono", [
@@ -76,7 +77,6 @@ function seedData() {
     ], ["Telefono", "NombreComercial"]);
 
     // 4. UsuariosPortal (Pass hash for '123456')
-    var passHash123456 = hashPassword("123456");
     seedTable("UsuariosPortal", "UsuarioID", [
       ["UP001", "9991000001", "Juan Pérez", "Si", passHash123456, "2026-01-01 10:00:00"],
       ["UP002", "9991000002", "Maria López", "Si", passHash123456, "2026-01-02 11:30:00"],

@@ -104,7 +104,7 @@ function setupSchemaInternal(ss) {
   ensureSheet("UsuariosPortal", [
     "UsuarioID", "Telefono", "Nombre", "Activo", "PasswordHash", "FechaRegistro"
   ]);
-  ensureSheet("Admins", ["AdminID", "Nombre", "Rol", "Telefono", "Activo", "Email"]);
+  ensureSheet("Admins", ["AdminID", "Nombre", "Rol", "Telefono", "Activo", "Email", "PasswordHash"]);
   ensureSheet("Clientes", ["Telefono", "Nombre", "Correo", "TipoCliente"]);
   ensureSheet("Asignaciones", ["AsignacionID", "ServicioID", "TecnicoID", "FechaAsignacion", "Estatus", "HorasInvertidas"]);
   ensureSheet("ActividadesTecnico", ["ActividadID", "TecnicoID", "ServicioID", "Fecha", "Accion", "Minutos"]);
@@ -129,9 +129,27 @@ function setupSchemaInternal(ss) {
     return String(a.Email).toLowerCase() === targetEmail.toLowerCase();
   })[0];
 
+  var defaultPassHash = hashPassword("123456");
+
   if (!existsAdmin) {
     var nextAdminId = getNextId("Admins", "ADM");
-    adminSheet.appendRow([nextAdminId, "Admin Sakurazukamori", "Administrador", "", "Si", targetEmail]);
+    adminSheet.appendRow([nextAdminId, "Admin Sakurazukamori", "Administrador", "", "Si", targetEmail, defaultPassHash]);
+  }
+
+  // Populate missing PasswordHash for existing Admins
+  adminsData = getSheetObjects("Admins");
+  var adminRows = adminSheet.getDataRange().getValues();
+  if (adminRows.length > 1) {
+    var headers = adminRows[0].map(function(h) { return String(h).trim(); });
+    var hashIdx = headers.indexOf("PasswordHash");
+    if (hashIdx !== -1) {
+      for (var r = 1; r < adminRows.length; r++) {
+        var currentHash = adminRows[r][hashIdx];
+        if (!currentHash) {
+          adminSheet.getRange(r + 1, hashIdx + 1).setValue(defaultPassHash);
+        }
+      }
+    }
   }
 
   // 3. Seed Configuracion sheet

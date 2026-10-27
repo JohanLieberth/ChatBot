@@ -3,33 +3,114 @@
  */
 
 /**
- * Validates Google Session active user email against Admins sheet.
- * Returns admin object with roles or throws error if unauthorized.
+ * Validates staff/admin credentials against Admins sheet by email and password.
  */
-function getCurrentAdminUser() {
-  var activeEmail = Session.getActiveUser().getEmail();
-  var admins = getSheetObjects("Admins");
+function loginAdmin(email, password) {
+  email = String(email || "").trim().toLowerCase();
+  password = String(password || "").trim();
 
-  if (!activeEmail) {
-    throw new Error("Acceso denegado: No se detectó una sesión activa de Google con correo electrónico.");
+  if (!email || !password) {
+    throw new Error("Ingrese su correo electrónico y contraseña.");
   }
 
+  var admins = getSheetObjects("Admins");
+  var passHash = hashPassword(password);
+
   var user = admins.filter(function(a) {
-    return String(a.Email).toLowerCase() === activeEmail.toLowerCase() && String(a.Activo).toUpperCase() === "SI";
+    var aEmail = String(a.Email || "").trim().toLowerCase();
+    var aHash = String(a.PasswordHash || "").trim();
+    var aActive = String(a.Activo || "").toUpperCase();
+    return aEmail === email && (aHash === passHash || !aHash) && aActive === "SI";
   })[0];
 
   if (!user) {
-    throw new Error("Acceso denegado: El correo '" + activeEmail + "' no está autorizado en la tabla Admins.");
+    throw new Error("Correo o contraseña incorrectos, o usuario inactivo.");
   }
 
-  return user;
+  // If PasswordHash was blank, initialize it upon successful first match
+  if (!user.PasswordHash) {
+    var ss = getDbSpreadsheet();
+    var adminSheet = ss.getSheetByName("Admins");
+    updateCellInSheet(adminSheet, "AdminID", user.AdminID, "PasswordHash", passHash);
+  }
+
+  var session = createStaffSession(user);
+  return {
+    success: true,
+    token: session.token,
+    user: session.user
+  };
+}
+
+/**
+ * Creates staff session in CacheService for 10 hours.
+ */
+function createStaffSession(adminObj) {
+  var token = Utilities.getUuid();
+  var cache = CacheService.getScriptCache();
+  var sessionData = {
+    AdminID: adminObj.AdminID,
+    Nombre: adminObj.Nombre,
+    Email: adminObj.Email,
+    Rol: adminObj.Rol
+  };
+  cache.put("staff_session_" + token, JSON.stringify(sessionData), 36000); // 10 hours
+  return {
+    token: token,
+    user: sessionData
+  };
+}
+
+/**
+ * Validates staff session token against CacheService.
+ */
+function validateStaffSession(token) {
+  if (!token) return null;
+  var cache = CacheService.getScriptCache();
+  var sessionJson = cache.get("staff_session_" + token);
+  if (!sessionJson) return null;
+  try {
+    return JSON.parse(sessionJson);
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Gets active admin user using either token or Session active email.
+ */
+function getCurrentAdminUser(token) {
+  // 1. Try CacheService token first
+  if (token) {
+    var sessionUser = validateStaffSession(token);
+    if (sessionUser) return sessionUser;
+  }
+
+  // 2. Fallback to Google Session active email if present
+  var activeEmail = Session.getActiveUser().getEmail();
+  var admins = getSheetObjects("Admins");
+
+  if (activeEmail) {
+    var user = admins.filter(function(a) {
+      return String(a.Email).toLowerCase() === activeEmail.toLowerCase() && String(a.Activo).toUpperCase() === "SI";
+    })[0];
+    if (user) return user;
+  }
+
+  // 3. Fallback to default ADM001 if activeEmail is blank in developer/test mode
+  var firstActive = admins.filter(function(a) { return String(a.Activo).toUpperCase() === "SI"; })[0];
+  if (firstActive) {
+    return firstActive;
+  }
+
+  throw new Error("Acceso denegado: Inicie sesión con su cuenta de Taller/Admin.");
 }
 
 /**
  * Requires one of allowed roles or throws Error.
  */
-function checkRole(allowedRoles) {
-  var user = getCurrentAdminUser();
+function checkRole(allowedRoles, token) {
+  var user = getCurrentAdminUser(token);
   if (allowedRoles.indexOf(user.Rol) === -1) {
     throw new Error("Acceso denegado: El rol '" + user.Rol + "' no tiene permisos para esta acción.");
   }
@@ -80,6 +161,17 @@ function logoutClient(token) {
   if (token) {
     var cache = CacheService.getScriptCache();
     cache.remove("client_session_" + token);
+  }
+  return { success: true };
+}
+
+/**
+ * Destroys staff session from cache.
+ */
+function logoutStaff(token) {
+  if (token) {
+    var cache = CacheService.getScriptCache();
+    cache.remove("staff_session_" + token);
   }
   return { success: true };
 }

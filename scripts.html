@@ -95,7 +95,30 @@
     var token = getClientToken();
     runGas("logoutClient", token).finally(() => {
       setClientToken("");
-      window.location.href = "?page=home";
+      window.top.location.href = (window.SCRIPT_URL || "") + "?page=home";
+    });
+  }
+
+  /**
+   * Staff Session Token LocalStorage helpers
+   */
+  function getStaffToken() {
+    return localStorage.getItem("bitfix_staff_token") || "";
+  }
+
+  function setStaffToken(token) {
+    if (token) {
+      localStorage.setItem("bitfix_staff_token", token);
+    } else {
+      localStorage.removeItem("bitfix_staff_token");
+    }
+  }
+
+  function logoutStaffPortal() {
+    var token = getStaffToken();
+    runGas("logoutStaff", token).finally(() => {
+      setStaffToken("");
+      window.top.location.href = (window.SCRIPT_URL || "") + "?page=login";
     });
   }
 
