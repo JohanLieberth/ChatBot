@@ -7,8 +7,23 @@ function onOpen() {
   ui.createMenu("BitFix")
     .addItem("Inicializar sistema", "setupSchema")
     .addItem("Limpiar esquema", "cleanupSchema")
+    .addItem("Cargar datos de prueba", "menuCargarDatosPrueba")
     .addItem("Abrir Web App", "abrirWebApp")
     .addToUi();
+}
+
+function menuCargarDatosPrueba() {
+  var ui = SpreadsheetApp.getUi();
+  var resp = ui.alert(
+    "Cargar datos de prueba",
+    "¿Está seguro de cargar el dataset de prueba en las hojas del spreadsheet?",
+    ui.ButtonSet.YES_NO
+  );
+
+  if (resp === ui.Button.YES) {
+    var res = seedData();
+    ui.alert("Resultado", res.message, ui.ButtonSet.OK);
+  }
 }
 
 function abrirWebApp() {
@@ -30,142 +45,147 @@ function abrirWebApp() {
 function setupSchema() {
   return withLock(function() {
     var ss = getDbSpreadsheet();
-
-    // Helper to ensure sheet exists
-    function ensureSheet(sheetName, headers) {
-      var sheet = ss.getSheetByName(sheetName);
-      if (!sheet) {
-        sheet = ss.insertSheet(sheetName);
-        sheet.appendRow(headers);
-      } else {
-        ensureHeaders(sheet, headers);
-      }
-      return sheet;
-    }
-
-    // Helper to ensure specific headers exist at exact column positions or appended
-    function ensureHeaders(sheet, expectedHeaders) {
-      var lastCol = sheet.getLastColumn();
-      var currentHeaders = [];
-      if (lastCol > 0) {
-        currentHeaders = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) {
-          return String(h).trim();
-        });
-      } else {
-        sheet.getRange(1, 1, 1, expectedHeaders.length).setValues([expectedHeaders]);
-        return;
-      }
-
-      expectedHeaders.forEach(function(header) {
-        if (currentHeaders.indexOf(header) === -1) {
-          currentHeaders.push(header);
-          sheet.getRange(1, currentHeaders.length).setValue(header);
-        }
-      });
-    }
-
-    // 1. Ensure sheets with updated target schema
-    ensureSheet("Equipos", ["EquipoID", "TelefonoCliente", "Tipo", "Marca", "Modelo", "No.Serie"]);
-    ensureSheet("OrdenServicio", [
-      "OrdenID", "Telefono", "FechaRecepcion", "EstatusGeneral",
-      "FechaHoraRecepcion", "CostoEstimado", "TotalFinal",
-      "Eliminada", "FechaEliminacion", "AdminID_Elimino"
-    ]);
-    ensureSheet("Servicios", [
-      "ServicioID", "DetalleID", "Diagnostico", "Solucion", "GarantiaDias",
-      "CostoDiagnostico", "CostoFinal", "FallaReportada", "ListoParaRecoleccion"
-    ]);
-    ensureSheet("DetalleOrden", [
-      "DetalleID", "OrdenID", "EquipoID", "Estatus", "FechaLiberacion", "Entregado", "TecnicoAsignadoID"
-    ]);
-    ensureSheet("UsuariosPortal", [
-      "UsuarioID", "Telefono", "Nombre", "Activo", "PasswordHash", "FechaRegistro"
-    ]);
-    ensureSheet("Admins", ["AdminID", "Nombre", "Rol", "Telefono", "Activo", "Email"]);
-    ensureSheet("Clientes", ["Telefono", "Nombre", "Correo", "TipoCliente"]);
-    ensureSheet("Asignaciones", ["AsignacionID", "ServicioID", "TecnicoID", "FechaAsignacion", "Estatus", "HorasInvertidas"]);
-    ensureSheet("ActividadesTecnico", ["ActividadID", "TecnicoID", "ServicioID", "Fecha", "Accion", "Minutos"]);
-    ensureSheet("HistorialServicio", ["HistorialID", "ServicioID", "FechaHora", "EstatusAnterior", "EstatusNuevo", "UsuarioID", "Notas"]);
-    ensureSheet("Pagos", ["PagoID", "OrdenID", "Fecha", "Importe", "Concepto"]);
-    ensureSheet("NFC", ["NFC_ID", "UID", "TelefonoCliente"]);
-    ensureSheet("MovimientosPuntos", ["MovimientoID", "TelefonoCliente", "Fecha", "Puntos", "Concepto"]);
-    ensureSheet("SaldoPuntos", ["Telefono", "Saldo"]);
-    ensureSheet("Talleres", ["Telefono", "NombreComercial"]);
-    ensureSheet("NotificacionesLog", [
-      "NotifID", "FechaHora", "Telefono", "OrdenID", "Tipo", "Destinatario", "Asunto", "Estado", "MensajeError"
-    ]);
-    ensureSheet("EtiquetasImpresas", [
-      "EtiquetaID", "OrdenID", "DetalleID", "Tipo", "FechaHora", "AdminID"
-    ]);
-
-    // 2. Ensure sakurazukamori21@gmail.com is present in Admins
-    var adminSheet = ss.getSheetByName("Admins");
-    var adminsData = getSheetObjects("Admins");
-    var targetEmail = "sakurazukamori21@gmail.com";
-    var existsAdmin = adminsData.filter(function(a) {
-      return String(a.Email).toLowerCase() === targetEmail.toLowerCase();
-    })[0];
-
-    if (!existsAdmin) {
-      var nextAdminId = getNextId("Admins", "ADM");
-      adminSheet.appendRow([nextAdminId, "Admin Sakurazukamori", "Administrador", "", "Si", targetEmail]);
-    }
-
-    // 3. Seed Configuracion sheet
-    var configSheet = ensureSheet("Configuracion", ["Parametro", "Valor"]);
-    var configData = getSheetObjects("Configuracion");
-    var configMap = {};
-    configData.forEach(function(row) {
-      if (row.Parametro) configMap[row.Parametro] = row.Valor;
-    });
-
-    var defaultConfig = {
-      "URLPortal": "https://script.google.com/macros/s/DEPLOYMENT_ID/exec",
-      "DireccionTaller": "Av. Principal #123, Col. Centro, Cancún, Q.R. Tel: 998-000-0000",
-      "VideoBienvenida": "https://www.w3schools.com/html/mov_bbb.mp4",
-      "TplAsunto_Bienvenida": "Bienvenido a BitFix - Cuenta activada",
-      "TplCuerpo_Bienvenida": "Hola {{Nombre}},\n\nTu cuenta en el portal BitFix ha sido registrada con éxito.\nPuedes consultar el avance de tus equipos en nuestro portal.",
-      "TplAsunto_RecepcionEquipo": "BitFix - Recepción de equipo {{OrdenID}}",
-      "TplCuerpo_RecepcionEquipo": "Hola {{Nombre}},\n\nHemos recibido tu equipo para revisión.\nOrden ID: {{OrdenID}}\nEquipo: {{Equipo}}\n\nPuedes darle seguimiento en el portal BitFix.",
-      "TplAsunto_ListoRecoleccion": "BitFix - Tu equipo está listo para recolección",
-      "TplCuerpo_ListoRecoleccion": "Hola {{Nombre}},\n\nTu equipo ({{Equipo}}, S/N: {{NoSerie}}) correspondiente al servicio {{ServicioID}} de la orden {{OrdenID}} ya está listo para recolección en nuestro taller.\n\nDirección del taller:\n{{DireccionTaller}}\n\nConsulta el portal para más información: {{URLPortal}}",
-      "TplAsunto_ReenvioManual": "BitFix - Actualización de tu servicio {{ServicioID}}",
-      "TplCuerpo_ReenvioManual": "Hola {{Nombre}},\n\nTe enviamos una actualización sobre tu orden {{OrdenID}} y servicio {{ServicioID}}.",
-      "TplAsunto_CambioEstatus": "BitFix - Cambio de estatus en orden {{OrdenID}}",
-      "TplCuerpo_CambioEstatus": "Hola {{Nombre}},\n\nEl estatus de tu servicio {{ServicioID}} ha cambiado a: {{EstatusNuevo}}."
-    };
-
-    Object.keys(defaultConfig).forEach(function(param) {
-      if (configMap[param] === undefined) {
-        configSheet.appendRow([param, defaultConfig[param]]);
-      }
-    });
-
-    // 4. Seed TablaPuntos sheet
-    var puntosSheet = ensureSheet("TablaPuntos", ["Accion", "Puntos"]);
-    var puntosData = getSheetObjects("TablaPuntos");
-    var puntosMap = {};
-    puntosData.forEach(function(row) {
-      if (row.Accion) puntosMap[row.Accion] = row.Puntos;
-    });
-
-    var defaultPuntos = {
-      "Servicio Mayor": 10,
-      "Referido": 25,
-      "Servicio Menor": 5
-    };
-
-    Object.keys(defaultPuntos).forEach(function(accion) {
-      if (puntosMap[accion] === undefined) {
-        puntosSheet.appendRow([accion, defaultPuntos[accion]]);
-      }
-    });
-
-    // Run cleanup migrations
-    cleanupSchemaInternal(ss);
-
+    setupSchemaInternal(ss);
     return { success: true, message: "Esquema e inicialización completada con éxito." };
   });
+}
+
+/**
+ * Internal schema initialization logic.
+ */
+function setupSchemaInternal(ss) {
+  // Helper to ensure sheet exists
+  function ensureSheet(sheetName, headers) {
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      sheet = ss.insertSheet(sheetName);
+      sheet.appendRow(headers);
+    } else {
+      ensureHeaders(sheet, headers);
+    }
+    return sheet;
+  }
+
+  // Helper to ensure specific headers exist at exact column positions or appended
+  function ensureHeaders(sheet, expectedHeaders) {
+    var lastCol = sheet.getLastColumn();
+    var currentHeaders = [];
+    if (lastCol > 0) {
+      currentHeaders = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) {
+        return String(h).trim();
+      });
+    } else {
+      sheet.getRange(1, 1, 1, expectedHeaders.length).setValues([expectedHeaders]);
+      return;
+    }
+
+    expectedHeaders.forEach(function(header) {
+      if (currentHeaders.indexOf(header) === -1) {
+        currentHeaders.push(header);
+        sheet.getRange(1, currentHeaders.length).setValue(header);
+      }
+    });
+  }
+
+  // 1. Ensure sheets with updated target schema
+  ensureSheet("Equipos", ["EquipoID", "TelefonoCliente", "Tipo", "Marca", "Modelo", "No.Serie"]);
+  ensureSheet("OrdenServicio", [
+    "OrdenID", "Telefono", "FechaRecepcion", "EstatusGeneral",
+    "FechaHoraRecepcion", "CostoEstimado", "TotalFinal",
+    "Eliminada", "FechaEliminacion", "AdminID_Elimino"
+  ]);
+  ensureSheet("Servicios", [
+    "ServicioID", "DetalleID", "Diagnostico", "Solucion", "GarantiaDias",
+    "CostoDiagnostico", "CostoFinal", "FallaReportada", "ListoParaRecoleccion"
+  ]);
+  ensureSheet("DetalleOrden", [
+    "DetalleID", "OrdenID", "EquipoID", "Estatus", "FechaLiberacion", "Entregado", "TecnicoAsignadoID"
+  ]);
+  ensureSheet("UsuariosPortal", [
+    "UsuarioID", "Telefono", "Nombre", "Activo", "PasswordHash", "FechaRegistro"
+  ]);
+  ensureSheet("Admins", ["AdminID", "Nombre", "Rol", "Telefono", "Activo", "Email"]);
+  ensureSheet("Clientes", ["Telefono", "Nombre", "Correo", "TipoCliente"]);
+  ensureSheet("Asignaciones", ["AsignacionID", "ServicioID", "TecnicoID", "FechaAsignacion", "Estatus", "HorasInvertidas"]);
+  ensureSheet("ActividadesTecnico", ["ActividadID", "TecnicoID", "ServicioID", "Fecha", "Accion", "Minutos"]);
+  ensureSheet("HistorialServicio", ["HistorialID", "ServicioID", "FechaHora", "EstatusAnterior", "EstatusNuevo", "UsuarioID", "Notas"]);
+  ensureSheet("Pagos", ["PagoID", "OrdenID", "Fecha", "Importe", "Concepto"]);
+  ensureSheet("NFC", ["NFC_ID", "UID", "TelefonoCliente"]);
+  ensureSheet("MovimientosPuntos", ["MovimientoID", "TelefonoCliente", "Fecha", "Puntos", "Concepto"]);
+  ensureSheet("SaldoPuntos", ["Telefono", "Saldo"]);
+  ensureSheet("Talleres", ["Telefono", "NombreComercial"]);
+  ensureSheet("NotificacionesLog", [
+    "NotifID", "FechaHora", "Telefono", "OrdenID", "Tipo", "Destinatario", "Asunto", "Estado", "MensajeError"
+  ]);
+  ensureSheet("EtiquetasImpresas", [
+    "EtiquetaID", "OrdenID", "DetalleID", "Tipo", "FechaHora", "AdminID"
+  ]);
+
+  // 2. Ensure sakurazukamori21@gmail.com is present in Admins
+  var adminSheet = ss.getSheetByName("Admins");
+  var adminsData = getSheetObjects("Admins");
+  var targetEmail = "sakurazukamori21@gmail.com";
+  var existsAdmin = adminsData.filter(function(a) {
+    return String(a.Email).toLowerCase() === targetEmail.toLowerCase();
+  })[0];
+
+  if (!existsAdmin) {
+    var nextAdminId = getNextId("Admins", "ADM");
+    adminSheet.appendRow([nextAdminId, "Admin Sakurazukamori", "Administrador", "", "Si", targetEmail]);
+  }
+
+  // 3. Seed Configuracion sheet
+  var configSheet = ensureSheet("Configuracion", ["Parametro", "Valor"]);
+  var configData = getSheetObjects("Configuracion");
+  var configMap = {};
+  configData.forEach(function(row) {
+    if (row.Parametro) configMap[row.Parametro] = row.Valor;
+  });
+
+  var defaultConfig = {
+    "URLPortal": "https://script.google.com/macros/s/DEPLOYMENT_ID/exec",
+    "DireccionTaller": "Av. Principal #123, Col. Centro, Cancún, Q.R. Tel: 998-000-0000",
+    "VideoBienvenida": "https://www.w3schools.com/html/mov_bbb.mp4",
+    "TplAsunto_Bienvenida": "Bienvenido a BitFix - Cuenta activada",
+    "TplCuerpo_Bienvenida": "Hola {{Nombre}},\n\nTu cuenta en el portal BitFix ha sido registrada con éxito.\nPuedes consultar el avance de tus equipos en nuestro portal.",
+    "TplAsunto_RecepcionEquipo": "BitFix - Recepción de equipo {{OrdenID}}",
+    "TplCuerpo_RecepcionEquipo": "Hola {{Nombre}},\n\nHemos recibido tu equipo para revisión.\nOrden ID: {{OrdenID}}\nEquipo: {{Equipo}}\n\nPuedes darle seguimiento en el portal BitFix.",
+    "TplAsunto_ListoRecoleccion": "BitFix - Tu equipo está listo para recolección",
+    "TplCuerpo_ListoRecoleccion": "Hola {{Nombre}},\n\nTu equipo ({{Equipo}}, S/N: {{NoSerie}}) correspondiente al servicio {{ServicioID}} de la orden {{OrdenID}} ya está listo para recolección en nuestro taller.\n\nDirección del taller:\n{{DireccionTaller}}\n\nConsulta el portal para más información: {{URLPortal}}",
+    "TplAsunto_ReenvioManual": "BitFix - Actualización de tu servicio {{ServicioID}}",
+    "TplCuerpo_ReenvioManual": "Hola {{Nombre}},\n\nTe enviamos una actualización sobre tu orden {{OrdenID}} y servicio {{ServicioID}}.",
+    "TplAsunto_CambioEstatus": "BitFix - Cambio de estatus en orden {{OrdenID}}",
+    "TplCuerpo_CambioEstatus": "Hola {{Nombre}},\n\nEl estatus de tu servicio {{ServicioID}} ha cambiado a: {{EstatusNuevo}}."
+  };
+
+  Object.keys(defaultConfig).forEach(function(param) {
+    if (configMap[param] === undefined) {
+      configSheet.appendRow([param, defaultConfig[param]]);
+    }
+  });
+
+  // 4. Seed TablaPuntos sheet
+  var puntosSheet = ensureSheet("TablaPuntos", ["Accion", "Puntos"]);
+  var puntosData = getSheetObjects("TablaPuntos");
+  var puntosMap = {};
+  puntosData.forEach(function(row) {
+    if (row.Accion) puntosMap[row.Accion] = row.Puntos;
+  });
+
+  var defaultPuntos = {
+    "Servicio Mayor": 10,
+    "Referido": 25,
+    "Servicio Menor": 5
+  };
+
+  Object.keys(defaultPuntos).forEach(function(accion) {
+    if (puntosMap[accion] === undefined) {
+      puntosSheet.appendRow([accion, defaultPuntos[accion]]);
+    }
+  });
+
+  // Run cleanup migrations
+  cleanupSchemaInternal(ss);
 }
 
 /**
