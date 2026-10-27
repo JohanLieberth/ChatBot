@@ -1,0 +1,130 @@
+<!-- Login View -->
+<div class="row justify-content-center py-5">
+  <div class="col-md-6 col-lg-5">
+    <div class="card card-custom shadow-lg">
+      <div class="card-header bg-dark text-white text-center py-3">
+        <h4 class="fw-bold mb-0"><i class="fas fa-lock me-2 text-warning"></i>Acceso al Sistema</h4>
+      </div>
+      <div class="card-body p-4">
+
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-pills nav-justified mb-4" id="loginTab" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active fw-bold" id="tab-cliente-tab" data-bs-toggle="tab" data-bs-target="#tab-cliente" type="button" role="tab">
+              <i class="fas fa-user me-1"></i> Cliente
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link fw-bold" id="tab-taller-tab" data-bs-toggle="tab" data-bs-target="#tab-taller" type="button" role="tab">
+              <i class="fas fa-tools me-1"></i> Taller / Admin
+            </button>
+          </li>
+        </ul>
+
+        <div class="tab-content" id="loginTabContent">
+          <!-- Client Login Tab -->
+          <div class="tab-pane fade show active" id="tab-cliente" role="tabpanel">
+            <form onsubmit="execLoginCliente(event)">
+              <div class="mb-3">
+                <label class="form-label fw-bold">Teléfono (10 dígitos)</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                  <input type="tel" id="clientPhone" class="form-control" placeholder="9991000001" required maxlength="10" pattern="\d{10}">
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-bold">Contraseña</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-key"></i></span>
+                  <input type="password" id="clientPass" class="form-control" placeholder="••••••••" required>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary w-100 btn-lg shadow-sm">
+                <i class="fas fa-sign-in-alt me-1"></i> Iniciar Sesión Cliente
+              </button>
+            </form>
+
+            <hr class="my-4">
+            <div class="text-center">
+              <span class="text-muted small">¿Aún no tienes cuenta?</span><br>
+              <a href="<?= scriptUrl ?>?page=portal_registro" target="_top" class="fw-bold text-decoration-none">
+                <i class="fas fa-user-plus me-1"></i> Regístrate aquí
+              </a>
+            </div>
+          </div>
+
+          <!-- Staff/Admin Login Tab -->
+          <div class="tab-pane fade" id="tab-taller" role="tabpanel">
+            <form onsubmit="execLoginStaff(event)">
+              <div class="mb-3">
+                <label class="form-label fw-bold">Correo Electrónico de Taller</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                  <input type="email" id="staffEmail" class="form-control" placeholder="admin@bitfix.mx" required>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-bold">Contraseña</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                  <input type="password" id="staffPass" class="form-control" placeholder="••••••••" required>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-dark w-100 btn-lg shadow-sm">
+                <i class="fas fa-user-shield me-2 text-warning"></i> Iniciar Sesión Taller / Admin
+              </button>
+            </form>
+
+            <div class="mt-3 text-center">
+              <span class="text-muted extra-small">Contraseña inicial de prueba para admins/técnicos: <strong>123456</strong></span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function navigateTo(pageName) {
+    var baseUrl = window.SCRIPT_URL || "";
+    window.top.location.href = baseUrl + "?page=" + pageName;
+  }
+
+  function execLoginCliente(e) {
+    e.preventDefault();
+    var phone = document.getElementById("clientPhone").value.trim();
+    var pass = document.getElementById("clientPass").value.trim();
+
+    runGas("loginClientePortal", phone, pass).then(res => {
+      if (res.success) {
+        setClientToken(res.token);
+        showToast("success", "Bienvenido", "Sesión iniciada correctamente.");
+        setTimeout(() => { navigateTo("portal"); }, 800);
+      }
+    });
+  }
+
+  function execLoginStaff(e) {
+    e.preventDefault();
+    var email = document.getElementById("staffEmail").value.trim();
+    var pass = document.getElementById("staffPass").value.trim();
+
+    runGas("loginAdmin", email, pass).then(res => {
+      if (res.success) {
+        setStaffToken(res.token);
+        showToast("success", "Acceso Concedido", `Bienvenido ${res.user.Nombre} (${res.user.Rol})`);
+        if (res.user.Rol === "Tecnico") {
+          setTimeout(() => { navigateTo("tecnico"); }, 800);
+        } else {
+          setTimeout(() => { navigateTo("admin"); }, 800);
+        }
+      }
+    });
+  }
+</script>

@@ -1,0 +1,293 @@
+<!-- Admin Users, NFC & Points View -->
+<div class="row mb-3 align-items-center">
+  <div class="col-md-6">
+    <h3 class="fw-bold text-dark mb-0">
+      <i class="fas fa-users-cog me-2 text-purple"></i>Gestión de Clientes, NFC y Puntos
+    </h3>
+  </div>
+  <div class="col-md-6 text-md-end mt-2 mt-md-0">
+    <a href="<?= scriptUrl ?>?page=admin" target="_top" class="btn btn-outline-secondary">
+      <i class="fas fa-arrow-left me-1"></i> Volver a Órdenes
+    </a>
+  </div>
+</div>
+
+<!-- Search Customer Bar -->
+<div class="card card-custom p-4 mb-4 shadow-sm">
+  <form onsubmit="buscarClienteNfc(event)">
+    <div class="row g-2 align-items-center">
+      <div class="col-md-8">
+        <label class="form-label fw-bold">Buscar Cliente por Número de Teléfono (10 dígitos)</label>
+        <div class="input-group input-group-lg">
+          <span class="input-group-text"><i class="fas fa-phone"></i></span>
+          <input type="tel" id="searchClientTel" class="form-control" placeholder="Ej. 9991000001" required maxlength="10" pattern="\d{10}">
+          <button class="btn btn-purple text-white fw-bold" type="submit">
+            <i class="fas fa-search me-1"></i> Buscar Cliente
+          </button>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Customer Profile & NFC / Points Container -->
+<div id="containerClienteProfile" class="d-none">
+  <div class="row g-4">
+    <!-- General Info Card -->
+    <div class="col-md-4">
+      <div class="card card-custom p-3 h-100 shadow-sm">
+        <h5 class="fw-bold text-dark border-bottom pb-2">
+          <i class="fas fa-id-card me-2 text-primary"></i>Datos del Cliente
+        </h5>
+        <div class="mt-2">
+          <label class="small text-muted">Nombre Completo:</label>
+          <div class="fs-5 fw-bold" id="profNombre">-</div>
+        </div>
+        <div class="mt-2">
+          <label class="small text-muted">Teléfono:</label>
+          <div class="fw-bold" id="profTel">-</div>
+        </div>
+        <div class="mt-2">
+          <label class="small text-muted">Correo Electrónico:</label>
+          <div class="fw-bold text-truncate" id="profCorreo">-</div>
+        </div>
+        <div class="mt-2">
+          <label class="small text-muted">Tipo de Cliente:</label>
+          <div id="profTipoBadge">-</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NFC Management Card -->
+    <div class="col-md-4">
+      <div class="card card-custom p-3 h-100 shadow-sm">
+        <h5 class="fw-bold text-dark border-bottom pb-2">
+          <i class="fas fa-wifi me-2 text-info"></i>Tarjeta / Token NFC
+        </h5>
+        <div id="profNfcList" class="my-2">
+          <!-- NFC UID list -->
+        </div>
+
+        <hr class="my-2">
+        <h6 class="fw-bold small mb-2"><i class="fas fa-plus-circle me-1"></i> Vincular Nuevo Token NFC</h6>
+        <div class="input-group input-group-sm mb-2">
+          <input type="text" id="inputNfcUid" class="form-control text-uppercase" placeholder="UID (ej. 04A1B2C3)">
+          <button class="btn btn-info text-white fw-bold" onclick="ejecutarVincularNfc(false)">
+            <i class="fas fa-link me-1"></i> Vincular
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Points Management Card -->
+    <div class="col-md-4">
+      <div class="card card-custom p-3 h-100 shadow-sm">
+        <h5 class="fw-bold text-dark border-bottom pb-2">
+          <i class="fas fa-coins me-2 text-warning"></i>Saldo de Puntos BitFix
+        </h5>
+        <div class="text-center py-2">
+          <div class="display-5 fw-bold text-warning" id="profSaldoPuntos">0</div>
+          <span class="text-muted small">Puntos acumulados</span>
+        </div>
+
+        <button class="btn btn-warning w-100 fw-bold mt-2" onclick="abrirModalMovimientoPuntos()">
+          <i class="fas fa-exchange-alt me-1"></i> Otorgar / Canjear Puntos
+        </button>
+      </div>
+    </div>
+
+    <!-- Points History Table -->
+    <div class="col-12">
+      <div class="card card-custom p-3 shadow-sm">
+        <h5 class="fw-bold text-dark mb-3">
+          <i class="fas fa-history me-2 text-secondary"></i>Historial de Movimientos de Puntos
+        </h5>
+        <div class="table-responsive">
+          <table class="table table-sm table-striped align-middle">
+            <thead>
+              <tr>
+                <th>MovimientoID</th>
+                <th>Fecha</th>
+                <th>Puntos</th>
+                <th>Concepto</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyMovsPuntos">
+              <tr><td colspan="4" class="text-center text-muted">Sin movimientos registrados.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Movimiento Puntos -->
+<div class="modal fade" id="modalMovPuntos" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title fw-bold"><i class="fas fa-coins me-2"></i>Registrar Movimiento de Puntos</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label fw-bold">Tipo de Acción</label>
+          <select id="selectAccionPuntos" class="form-select" onchange="actualizarValoresAccionPuntos()">
+            <option value="Referido">Referido (+25 pts)</option>
+            <option value="Servicio Mayor">Servicio Mayor (+10 pts)</option>
+            <option value="Canje">Canje de Puntos (Negativo)</option>
+            <option value="Manual">Ajuste Manual</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-bold">Cantidad de Puntos (usa negativo para canjes)</label>
+          <input type="number" id="inputPuntosCantidad" class="form-control" value="25" required>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-bold">Concepto / Detalle</label>
+          <input type="text" id="inputPuntosConcepto" class="form-control" value="Referido por cliente" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-warning fw-bold" onclick="ejecutarMovimientoPuntos()">
+          <i class="fas fa-save me-1"></i> Guardar Movimiento
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  var clienteActualTel = "";
+
+  function buscarClienteNfc(e) {
+    if (e) e.preventDefault();
+    var tel = document.getElementById("searchClientTel").value.trim();
+    if (!tel) return;
+
+    runGas("getInfoClienteNFC", tel).then(data => {
+      clienteActualTel = data.Cliente.Telefono;
+      document.getElementById("containerClienteProfile").classList.remove("d-none");
+
+      document.getElementById("profNombre").innerText = data.Cliente.Nombre;
+      document.getElementById("profTel").innerText = data.Cliente.Telefono;
+      document.getElementById("profCorreo").innerText = data.Cliente.Correo || "Sin correo";
+      document.getElementById("profTipoBadge").innerHTML = data.Cliente.TipoCliente === "Taller"
+        ? `<span class="badge bg-purple">TALLER</span>`
+        : `<span class="badge bg-primary">CLIENTE</span>`;
+
+      // Render NFC List
+      var nfcHtml = "";
+      if (data.NFCs.length === 0) {
+        nfcHtml = '<div class="text-muted small">Sin tarjetas NFC vinculadas.</div>';
+      } else {
+        data.NFCs.forEach(n => {
+          nfcHtml += `
+            <div class="d-flex justify-content-between align-items-center bg-light p-2 rounded mb-1">
+              <span class="font-monospace fw-bold"><i class="fas fa-credit-card me-1 text-info"></i>${n.UID}</span>
+              <button class="btn btn-sm btn-outline-danger" onclick="ejecutarDesvincularNfc('${n.NFC_ID}')" title="Desvincular">
+                <i class="fas fa-unlink"></i>
+              </button>
+            </div>
+          `;
+        });
+      }
+      document.getElementById("profNfcList").innerHTML = nfcHtml;
+
+      // Render Points Balance
+      document.getElementById("profSaldoPuntos").innerText = data.SaldoPuntos;
+
+      // Render Points History
+      var tbody = document.getElementById("tbodyMovsPuntos");
+      if (data.MovimientosPuntos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Sin movimientos registrados.</td></tr>';
+      } else {
+        var h = "";
+        data.MovimientosPuntos.forEach(m => {
+          var pBadge = m.Puntos > 0
+            ? `<span class="badge bg-success">+${m.Puntos}</span>`
+            : `<span class="badge bg-danger">${m.Puntos}</span>`;
+          h += `
+            <tr>
+              <td class="font-monospace">${m.MovimientoID}</td>
+              <td class="small">${m.Fecha}</td>
+              <td>${pBadge}</td>
+              <td>${m.Concepto}</td>
+            </tr>
+          `;
+        });
+        tbody.innerHTML = h;
+      }
+    });
+  }
+
+  function ejecutarVincularNfc(reasignar) {
+    var uid = document.getElementById("inputNfcUid").value.trim();
+    if (!uid) {
+      showToast("warning", "Atención", "Ingrese un UID de tarjeta NFC.");
+      return;
+    }
+
+    runGas("vincularNFC", uid, clienteActualTel, reasignar).then(res => {
+      showToast("success", "NFC Vinculado", res.message);
+      document.getElementById("inputNfcUid").value = "";
+      buscarClienteNfc(null);
+    }).catch(err => {
+      if (err.message && err.message.includes("¿Desea reasignarlo?")) {
+        if (confirm(err.message)) {
+          ejecutarVincularNfc(true);
+        }
+      }
+    });
+  }
+
+  function ejecutarDesvincularNfc(nfcId) {
+    if (confirm("¿Está seguro de desvincular esta tarjeta NFC?")) {
+      runGas("desvincularNFC", nfcId).then(res => {
+        showToast("success", "Desvinculado", res.message);
+        buscarClienteNfc(null);
+      });
+    }
+  }
+
+  function abrirModalMovimientoPuntos() {
+    actualizarValoresAccionPuntos();
+    var modal = new bootstrap.Modal(document.getElementById("modalMovPuntos"));
+    modal.show();
+  }
+
+  function actualizarValoresAccionPuntos() {
+    var sel = document.getElementById("selectAccionPuntos").value;
+    var inputPts = document.getElementById("inputPuntosCantidad");
+    var inputConc = document.getElementById("inputPuntosConcepto");
+
+    if (sel === "Referido") {
+      inputPts.value = 25;
+      inputConc.value = "Puntos por referido";
+    } else if (sel === "Servicio Mayor") {
+      inputPts.value = 10;
+      inputConc.value = "Puntos por servicio mayor";
+    } else if (sel === "Canje") {
+      inputPts.value = -50;
+      inputConc.value = "Canje de puntos por descuento en taller";
+    } else {
+      inputPts.value = 0;
+      inputConc.value = "Ajuste manual de puntos";
+    }
+  }
+
+  function ejecutarMovimientoPuntos() {
+    var pts = document.getElementById("inputPuntosCantidad").value;
+    var conc = document.getElementById("inputPuntosConcepto").value;
+
+    runGas("registrarMovimientoPuntos", clienteActualTel, pts, conc).then(res => {
+      showToast("success", "Puntos Actualizados", res.message);
+      bootstrap.Modal.getInstance(document.getElementById("modalMovPuntos")).hide();
+      buscarClienteNfc(null);
+    });
+  }
+</script>
