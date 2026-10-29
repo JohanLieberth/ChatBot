@@ -6,24 +6,24 @@
  * Validates staff/admin credentials against Admins sheet by email and password.
  */
 function loginAdmin(email, password) {
-  email = String(email || "").trim().toLowerCase();
-  password = String(password || "").trim();
+  var cleanEmail = String(email || "").trim().toLowerCase();
+  var cleanPass = String(password || "").trim();
 
-  if (!email || !password) {
+  if (!cleanEmail || !cleanPass) {
     throw new Error("Ingrese su correo electrónico y contraseña.");
   }
 
   var admins = getSheetObjects("Admins");
-  var passHash = hashPassword(password);
+  var computedHash = hashPassword(cleanPass).toLowerCase();
 
   var user = admins.filter(function(a) {
     var aEmail = String(a.Email || "").trim().toLowerCase();
     var aHash = String(a.PasswordHash || "").trim().toLowerCase();
     var aActive = String(a.Activo || "").trim().toUpperCase();
 
-    var emailMatch = (aEmail === email);
-    // Allow pass match if hash matches OR if hash is empty (will auto-set hash)
-    var passMatch = (aHash === passHash.toLowerCase()) || (!aHash && password === "123456");
+    var emailMatch = (aEmail === cleanEmail);
+    // Allow pass match if hash matches OR if hash is empty and password is '123456'
+    var passMatch = (aHash === computedHash) || (!aHash && cleanPass === "123456");
     var activeMatch = (aActive === "SI" || aActive === "SÍ" || aActive === "" || a.Activo === undefined);
 
     return emailMatch && passMatch && activeMatch;
@@ -37,7 +37,7 @@ function loginAdmin(email, password) {
   if (!user.PasswordHash) {
     var ss = getDbSpreadsheet();
     var adminSheet = ss.getSheetByName("Admins");
-    updateCellInSheet(adminSheet, "AdminID", user.AdminID, "PasswordHash", passHash);
+    updateCellInSheet(adminSheet, "AdminID", user.AdminID, "PasswordHash", computedHash);
   }
 
   var session = createStaffSession(user);
