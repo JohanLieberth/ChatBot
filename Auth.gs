@@ -18,9 +18,15 @@ function loginAdmin(email, password) {
 
   var user = admins.filter(function(a) {
     var aEmail = String(a.Email || "").trim().toLowerCase();
-    var aHash = String(a.PasswordHash || "").trim();
-    var aActive = String(a.Activo || "").toUpperCase();
-    return aEmail === email && (aHash === passHash || !aHash) && aActive === "SI";
+    var aHash = String(a.PasswordHash || "").trim().toLowerCase();
+    var aActive = String(a.Activo || "").trim().toUpperCase();
+
+    var emailMatch = (aEmail === email);
+    // Allow pass match if hash matches OR if hash is empty (will auto-set hash)
+    var passMatch = (aHash === passHash.toLowerCase()) || (!aHash && password === "123456");
+    var activeMatch = (aActive === "SI" || aActive === "SÍ" || aActive === "" || a.Activo === undefined);
+
+    return emailMatch && passMatch && activeMatch;
   })[0];
 
   if (!user) {
@@ -92,13 +98,18 @@ function getCurrentAdminUser(token) {
 
   if (activeEmail) {
     var user = admins.filter(function(a) {
-      return String(a.Email).toLowerCase() === activeEmail.toLowerCase() && String(a.Activo).toUpperCase() === "SI";
+      return String(a.Email).trim().toLowerCase() === activeEmail.trim().toLowerCase() &&
+             (String(a.Activo).trim().toUpperCase() === "SI" || String(a.Activo).trim().toUpperCase() === "SÍ" || !a.Activo);
     })[0];
     if (user) return user;
   }
 
   // 3. Fallback to default ADM001 if activeEmail is blank in developer/test mode
-  var firstActive = admins.filter(function(a) { return String(a.Activo).toUpperCase() === "SI"; })[0];
+  var firstActive = admins.filter(function(a) {
+    var act = String(a.Activo || "").trim().toUpperCase();
+    return act === "SI" || act === "SÍ" || !act;
+  })[0];
+
   if (firstActive) {
     return firstActive;
   }

@@ -4,7 +4,7 @@
 
 /**
  * Main Web App HTTP GET endpoint handler.
- * Routes page requests: home, admin, tecnico, portal, login, comprobante, etiqueta.
+ * Routes page requests: home, admin, admin_usuarios, tecnico, portal, portal_registro, login, comprobante, etiqueta.
  */
 function doGet(e) {
   e = e || {};
@@ -13,6 +13,11 @@ function doGet(e) {
   // Direct standalone render for ticket printing or labels
   if (page === "comprobante" || page === "etiqueta") {
     return renderPrintView(page, e.parameter);
+  }
+
+  // Handle tab=usuarios parameter when page=admin or missing
+  if (e.parameter && String(e.parameter.tab).toLowerCase() === "usuarios") {
+    page = "admin_usuarios";
   }
 
   // Get current script execution Web App URL
